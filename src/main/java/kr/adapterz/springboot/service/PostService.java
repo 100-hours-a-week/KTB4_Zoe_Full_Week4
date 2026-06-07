@@ -2,8 +2,11 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
+import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostResponseDto;
+import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.repository.CommentRepository;
@@ -42,12 +45,12 @@ public class PostService {
         return toResponse(savedPost, currentUserId);
     }
 
-    public List<PostResponseDto> getPosts() {
-        Long currentUserId = currentUserProvider.getCurrentUserId();
-
-        return postRepository.findAll().stream()
-                .map(post -> toResponse(post, currentUserId))
+    public ApiResponseDto<PostListResponseDto> getPosts() {
+        List<PostSummaryResponseDto> posts = postRepository.findAll().stream()
+                .map(this::toSummaryResponse)
                 .toList();
+
+        return new ApiResponseDto<>("fetch_success", new PostListResponseDto(posts));
     }
 
     public PostResponseDto getPost(Long postId) {
@@ -101,5 +104,12 @@ public class PostService {
                 && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
         return new PostResponseDto(post, commentCount, likeCount, liked);
+    }
+
+    private PostSummaryResponseDto toSummaryResponse(Post post) {
+        long commentCount = commentRepository.countByPostId(post.getId());
+        long likeCount = likeRepository.countByPostId(post.getId());
+
+        return new PostSummaryResponseDto(post, likeCount, commentCount);
     }
 }

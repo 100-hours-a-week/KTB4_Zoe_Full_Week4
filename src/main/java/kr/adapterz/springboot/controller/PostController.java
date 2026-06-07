@@ -1,15 +1,14 @@
 package kr.adapterz.springboot.controller;
 
+import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostResponseDto;
-import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/posts")
@@ -26,7 +25,7 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PostResponseDto>> getPosts() {
+    public ResponseEntity<ApiResponseDto<PostListResponseDto>> getPosts() {
         return ResponseEntity.ok(postService.getPosts());
     }
 
