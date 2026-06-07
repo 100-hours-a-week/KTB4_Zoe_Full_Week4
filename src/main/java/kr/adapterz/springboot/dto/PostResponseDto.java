@@ -13,6 +13,8 @@ public class PostResponseDto {
     private Long postId;
     private String title;
     private String content;
+    @JsonProperty("image_url")
+    private String imageUrl;
     @JsonProperty("author_id")
     private Long authorId;
     @JsonProperty("comment_count")
@@ -32,6 +34,7 @@ public class PostResponseDto {
         this.postId = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
+        this.imageUrl = post.getImageUrl();
         this.authorId = post.getAuthor().getId();
         this.commentCount = commentCount;
         this.likeCount = likeCount;

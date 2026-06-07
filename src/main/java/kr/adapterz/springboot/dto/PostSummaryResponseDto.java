@@ -15,6 +15,9 @@ public class PostSummaryResponseDto {
 
     private String title;
 
+    @JsonProperty("image_url")
+    private String imageUrl;
+
     @JsonProperty("created_at")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
@@ -33,6 +36,7 @@ public class PostSummaryResponseDto {
     public PostSummaryResponseDto(Post post, long likeCount, long commentCount) {
         this.postId = post.getId();
         this.title = post.getTitle();
+        this.imageUrl = post.getImageUrl();
         this.createdAt = post.getCreatedAt();
         this.likeCount = likeCount;
         this.commentCount = commentCount;

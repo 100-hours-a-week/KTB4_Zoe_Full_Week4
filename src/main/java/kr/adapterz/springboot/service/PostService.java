@@ -37,6 +37,7 @@ public class PostService {
         Post post = new Post(
                 request.getTitle(),
                 request.getContent(),
+                request.getImageUrl(),
                 author
         );
 
@@ -76,6 +77,7 @@ public class PostService {
 
         post.changeTitle(request.getTitle());
         post.changeContent(request.getContent());
+        post.changeImageUrl(request.getImageUrl());
 
         return toResponse(post, currentUserId);
     }

@@ -11,15 +11,17 @@ public class Post {
 
     private String title;
     private String content;
+    private String imageUrl;
 
     private User author;
 
     private long viewCount;
     private LocalDateTime createdAt;
 
-    public Post(String title, String content, User author) {
+    public Post(String title, String content, String imageUrl, User author) {
         this.title =  title;
         this.content = content;
+        this.imageUrl = imageUrl;
         this.author = author;
         this.createdAt = LocalDateTime.now();
     }
@@ -30,6 +32,10 @@ public class Post {
 
     public void changeContent(String content) {
         this.content = content;
+    }
+
+    public void changeImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     //게시글 생성시 id 부여 메서드
