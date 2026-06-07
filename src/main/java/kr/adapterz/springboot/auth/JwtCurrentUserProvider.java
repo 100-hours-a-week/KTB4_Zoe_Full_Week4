@@ -1,8 +1,11 @@
 package kr.adapterz.springboot.auth;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
 
 @Component
 public class JwtCurrentUserProvider implements CurrentUserProvider {
@@ -25,12 +28,14 @@ public class JwtCurrentUserProvider implements CurrentUserProvider {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        String bearer = request.getHeader("Authorization");
-
-        if (bearer == null || !bearer.startsWith("Bearer ")) {
+        if (request.getCookies() == null) {
             throw new UnauthorizedException();
         }
 
-        return bearer.substring(7);
+        return Arrays.stream(request.getCookies())
+                .filter(cookie -> "accessToken".equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .findFirst()
+                .orElseThrow(UnauthorizedException::new);
     }
 }
