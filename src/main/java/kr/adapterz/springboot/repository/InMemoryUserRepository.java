@@ -29,7 +29,8 @@ public class InMemoryUserRepository implements UserRepository {
                 id,
                 user.getEmail(),
                 user.getPassword(),
-                user.getNickname()
+                user.getNickname(),
+                user.getProfileImage()
         );
 
         users.put(id, savedUser);

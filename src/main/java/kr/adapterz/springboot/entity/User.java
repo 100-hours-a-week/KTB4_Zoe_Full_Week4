@@ -1,7 +1,6 @@
 package kr.adapterz.springboot.entity;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,14 +13,16 @@ public class User {
     private  String email;
     private  String password;
     private  String nickname;
+    private String profileImage;
 
     private  final List<Post> posts = new ArrayList<>();
 
-    public User(Long id, String email, String password, String nickname) {
+    public User(Long id, String email, String password, String nickname, String profileImage) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.profileImage = profileImage;
     }
 
     public void changeNickname(String nickname) {

@@ -26,7 +26,8 @@ public class AuthService {
                 null,
                 request.getEmail(),
                 request.getPassword(),
-                request.getNickname()
+                request.getNickname(),
+                request.getProfileImage()
         );
 
         userRepository.save(user);

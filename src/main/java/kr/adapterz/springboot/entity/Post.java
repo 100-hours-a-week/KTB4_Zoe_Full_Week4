@@ -1,7 +1,8 @@
 package kr.adapterz.springboot.entity;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Getter
 public class Post {
@@ -14,11 +15,13 @@ public class Post {
     private User author;
 
     private long viewCount;
+    private LocalDateTime createdAt;
 
     public Post(String title, String content, User author) {
         this.title =  title;
         this.content = content;
         this.author = author;
+        this.createdAt = LocalDateTime.now();
     }
 
     public void  changeTitle(String title) {
