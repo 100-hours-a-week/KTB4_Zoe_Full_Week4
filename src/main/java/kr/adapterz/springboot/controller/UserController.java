@@ -4,6 +4,7 @@ import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserResponseDto;
+import kr.adapterz.springboot.dto.UserUpdateResponseDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ public class UserController {
     }
 
     @PutMapping
-    public ResponseEntity<ApiResponseDto<UserResponseDto>> putUser(
+    public ResponseEntity<ApiResponseDto<UserUpdateResponseDto>> putUser(
             @RequestBody UserUpdateRequestDto request
     ) {
         Long userId = currentUserProvider.getCurrentUserId();
         User user = userService.updateUser(userId, request);
-        UserResponseDto response = new UserResponseDto(user);
+        UserUpdateResponseDto response = new UserUpdateResponseDto(user);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
