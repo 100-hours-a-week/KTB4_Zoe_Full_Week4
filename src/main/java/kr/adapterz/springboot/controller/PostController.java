@@ -20,24 +20,19 @@ public class PostController {
 
     @PostMapping
     public ResponseEntity<PostResponseDto> createPost(@RequestBody PostRequestDto request) {
-        Post post = postService.createPost(request);
+        PostResponseDto response = postService.createPost(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new PostResponseDto(post));
+                .body(response);
     }
 
     @GetMapping
     public ResponseEntity<List<PostResponseDto>> getPosts() {
-        List<PostResponseDto> response = postService.getPosts().stream()
-                .map(PostResponseDto::new)
-                .toList();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(postService.getPosts());
     }
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponseDto> getPost(@PathVariable Long postId) {
-        Post post = postService.getPost(postId);
-        return ResponseEntity.ok(new PostResponseDto(post));
+        return ResponseEntity.ok(postService.getPost(postId));
     }
 
     @PutMapping("/{postId}")
@@ -45,8 +40,8 @@ public class PostController {
             @PathVariable Long postId,
             @RequestBody PostRequestDto request
     ) {
-        Post post = postService.updatePost(postId, request);
-        return ResponseEntity.ok(new PostResponseDto(post));
+        PostResponseDto response = postService.updatePost(postId, request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{postId}")

@@ -13,6 +13,8 @@ public class Post {
 
     private User author;
 
+    private long viewCount;
+
     public Post(String title, String content, User author) {
         this.title =  title;
         this.content = content;
@@ -30,5 +32,9 @@ public class Post {
     //게시글 생성시 id 부여 메서드
     public void assignId(Long id) {
         this.id = id;
+    }
+
+    public void increaseViewCount() {
+        this.viewCount++;
     }
 }

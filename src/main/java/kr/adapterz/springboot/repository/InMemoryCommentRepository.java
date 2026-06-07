@@ -43,4 +43,11 @@ public class InMemoryCommentRepository implements CommentRepository {
     public boolean deleteById(Long id) {
         return comments.remove(id) != null;
     }
+
+    @Override
+    public long countByPostId(Long postId) {
+        return comments.values().stream()
+                .filter(comment -> comment.getPost().getId().equals(postId))
+                .count();
+    }
 }

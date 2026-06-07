@@ -14,4 +14,6 @@ public interface CommentRepository {
     List<Comment> findByPostId(Long postId);
 
     boolean deleteById(Long id);
+
+    long countByPostId(Long postId);
 }

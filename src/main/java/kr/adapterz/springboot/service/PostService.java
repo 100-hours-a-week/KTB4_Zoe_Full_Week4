@@ -3,8 +3,11 @@ package kr.adapterz.springboot.service;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.dto.PostRequestDto;
+import kr.adapterz.springboot.dto.PostResponseDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.repository.CommentRepository;
+import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +22,10 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final CommentRepository commentRepository;
+    private final LikeRepository likeRepository;
 
-    public Post createPost(PostRequestDto request) {
+    public PostResponseDto createPost(PostRequestDto request) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
@@ -32,20 +37,34 @@ public class PostService {
                 author
         );
 
-        return postRepository.save(post);
+        Post savedPost = postRepository.save(post);
+
+        return toResponse(savedPost, currentUserId);
     }
 
-    public List<Post> getPosts() {
-        return postRepository.findAll();
+    public List<PostResponseDto> getPosts() {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+
+        return postRepository.findAll().stream()
+                .map(post -> toResponse(post, currentUserId))
+                .toList();
     }
 
-    public Post getPost(Long postId) {
-        return postRepository.findById(postId)
+    public PostResponseDto getPost(Long postId) {
+        Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        post.increaseViewCount();
+
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+
+        return toResponse(post, currentUserId);
     }
 
-    public Post updatePost(Long postId, PostRequestDto request) {
-        Post post = getPost(postId);
+    public PostResponseDto updatePost(Long postId, PostRequestDto request) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
         if (!post.getAuthor().getId().equals(currentUserId)) {
@@ -55,11 +74,13 @@ public class PostService {
         post.changeTitle(request.getTitle());
         post.changeContent(request.getContent());
 
-        return post;
+        return toResponse(post, currentUserId);
     }
 
     public void deletePost(Long postId) {
-        Post post = getPost(postId);
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
         if (!post.getAuthor().getId().equals(currentUserId)) {
@@ -71,5 +92,14 @@ public class PostService {
         if (!deleted) {
             throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
         }
+    }
+
+    private PostResponseDto toResponse(Post post, Long currentUserId) {
+        long commentCount = commentRepository.countByPostId(post.getId());
+        long likeCount = likeRepository.countByPostId(post.getId());
+        boolean liked = currentUserId != null
+                && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
+
+        return new PostResponseDto(post, commentCount, likeCount, liked);
     }
 }
