@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Getter
-@RequiredArgsConstructor
 public class User {
 
     private Long id;
@@ -16,9 +15,10 @@ public class User {
     private  String password;
     private  String nickname;
 
-    List<Post> posts = new ArrayList<>();
+    private  final List<Post> posts = new ArrayList<>();
 
-    public User(String email, String password, String nickname) {
+    public User(Long id, String email, String password, String nickname) {
+        this.id = id;
         this.email = email;
         this.password = password;
         this.nickname = nickname;
@@ -28,8 +28,7 @@ public class User {
         this.nickname = nickname;
     }
 
-    //유저 생성시 id 부여 메서드
-    public void assignId(Long id) {
-        this.id = id;
+    public void changePassword(String password) {
+        this.password = password;
     }
 }
