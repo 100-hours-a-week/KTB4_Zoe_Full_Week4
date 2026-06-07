@@ -17,9 +17,16 @@ public class JwtTokenProvider {
     );
 
     //토큰 생성
-    public String createToken(Long userId) {
+    public TokenPair createTokenPair(Long userId) {
+        String accessToken = createToken(userId, 1000 * 60 * 60); // 1시간
+        String refreshToken = createToken(userId, 1000L * 60 * 60 * 24 * 14); // 14일
+
+        return new TokenPair(accessToken, refreshToken);
+    }
+
+    private String createToken(Long userId, long expirationMillis) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + 1000 * 60 * 60);
+        Date expiration = new Date(now.getTime() + expirationMillis);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
@@ -28,6 +35,7 @@ public class JwtTokenProvider {
                 .signWith(key)
                 .compact();
     }
+
 
     //토큰 검증
     public Long getUserId(String token) {
