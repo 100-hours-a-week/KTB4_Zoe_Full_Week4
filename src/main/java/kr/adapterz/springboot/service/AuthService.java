@@ -1,0 +1,63 @@
+package kr.adapterz.springboot.service;
+
+import kr.adapterz.springboot.auth.JwtTokenProvider;
+import kr.adapterz.springboot.auth.TokenPair;
+import kr.adapterz.springboot.dto.LoginRequestDto;
+import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
+import kr.adapterz.springboot.dto.SignupRequestDto;
+import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    public void signup(SignupRequestDto request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+        }
+
+        User user = new User(
+                null,
+                request.getEmail(),
+                request.getPassword(),
+                request.getNickname()
+        );
+
+        userRepository.save(user);
+    }
+
+    public TokenPair login(LoginRequestDto request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
+
+        if (!user.getPassword().equals(request.getPassword())) {
+            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        return jwtTokenProvider.createTokenPair(user.getId()); //토큰 반환
+
+    }
+
+    public TokenPair reissue(String refreshToken) {
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+
+        return jwtTokenProvider.createTokenPair(userId);
+    }
+
+    public void changePassword(String accessToken, PasswordChangeRequestDto request) {
+        Long userId = jwtTokenProvider.getUserId(accessToken);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        user.changePassword(request.getPassword());
+
+        userRepository.save(user);
+    }
+}

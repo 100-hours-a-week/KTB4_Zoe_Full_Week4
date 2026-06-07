@@ -1,0 +1,120 @@
+package kr.adapterz.springboot.controller;
+
+import jakarta.servlet.http.HttpServletResponse;
+import kr.adapterz.springboot.auth.TokenPair;
+import kr.adapterz.springboot.dto.LoginRequestDto;
+import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
+import kr.adapterz.springboot.dto.SignupRequestDto;
+import kr.adapterz.springboot.service.AuthService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
+        authService.signup(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<Void> login(
+            @RequestBody LoginRequestDto request,
+            HttpServletResponse response
+    ) {
+        TokenPair tokens = authService.login(request);
+
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", tokens.accessToken())
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(60 * 60)
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", tokens.refreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(60 * 60 * 24 * 14)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        return ResponseEntity.ok().build();
+    }
+
+    //로그아웃시 쿠키 삭제
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<Void> reissue(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response
+    ) {
+        TokenPair tokens = authService.reissue(refreshToken);
+
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", tokens.accessToken())
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(60 * 60)
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", tokens.refreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(60 * 60 * 24 * 14)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(
+            @CookieValue(name = "accessToken", required = false) String accessToken,
+            @RequestBody PasswordChangeRequestDto request
+    ) {
+        authService.changePassword(accessToken, request);
+        return ResponseEntity.ok().build();
+    }
+}
