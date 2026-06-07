@@ -1,6 +1,7 @@
 package kr.adapterz.springboot.controller;
 
 import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.CommentListResponseDto;
 import kr.adapterz.springboot.dto.CommentRequestDto;
 import kr.adapterz.springboot.dto.CommentResponseDto;
 import kr.adapterz.springboot.entity.Comment;
@@ -9,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/comments")
@@ -28,12 +27,12 @@ public class CommentController {
     }
 
     @GetMapping("/posts/{post_id}")
-    public ResponseEntity<ApiResponseDto<List<CommentResponseDto>>> getComments(
-            @PathVariable("post_id") Long postId
+    public ResponseEntity<ApiResponseDto<CommentListResponseDto>> getComments(
+            @PathVariable("post_id") Long postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        List<CommentResponseDto> response = commentService.getComments(postId).stream()
-                .map(CommentResponseDto::new)
-                .toList();
+        CommentListResponseDto response = commentService.getComments(postId, page, size);
 
         return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", response));
     }

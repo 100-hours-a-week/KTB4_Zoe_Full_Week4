@@ -2,7 +2,10 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
+import kr.adapterz.springboot.dto.CommentListResponseDto;
 import kr.adapterz.springboot.dto.CommentRequestDto;
+import kr.adapterz.springboot.dto.CommentResponseDto;
+import kr.adapterz.springboot.dto.PaginationResponseDto;
 import kr.adapterz.springboot.entity.Comment;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
@@ -46,6 +49,24 @@ public class CommentService {
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
         return commentRepository.findByPostId(postId);
+    }
+
+    public CommentListResponseDto getComments(Long postId, int page, int size) {
+        postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        List<Comment> comments = commentRepository.findByPostId(postId);
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.max(size, 1);
+        int startIndex = Math.min((safePage - 1) * safeSize, comments.size());
+        int endIndex = Math.min(startIndex + safeSize, comments.size());
+        boolean hasNext = endIndex < comments.size();
+
+        List<CommentResponseDto> response = comments.subList(startIndex, endIndex).stream()
+                .map(CommentResponseDto::new)
+                .toList();
+
+        return new CommentListResponseDto(response, new PaginationResponseDto(safePage, safeSize, hasNext));
     }
 
     public Comment updateComment(Long commentId, CommentRequestDto request) {
