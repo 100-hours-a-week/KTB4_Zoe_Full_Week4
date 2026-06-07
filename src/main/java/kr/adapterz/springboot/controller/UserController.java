@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserResponseDto;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final CurrentUserProvider currentUserProvider;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponseDto<UserResponseDto>> getUser(@PathVariable Long userId) {
+    @GetMapping
+    public ResponseEntity<ApiResponseDto<UserResponseDto>> getUser() {
+        Long userId = currentUserProvider.getCurrentUserId();
         User user = userService.getUser(userId);
         UserResponseDto response = new UserResponseDto(user);
 
@@ -27,11 +30,11 @@ public class UserController {
                 .body(new ApiResponseDto<>("fetch_success", response));
     }
 
-    @PutMapping("/{userId}")
+    @PutMapping
     public ResponseEntity<ApiResponseDto<UserResponseDto>> putUser(
-            @PathVariable Long userId,
             @RequestBody UserUpdateRequestDto request
     ) {
+        Long userId = currentUserProvider.getCurrentUserId();
         User user = userService.updateUser(userId, request);
         UserResponseDto response = new UserResponseDto(user);
 
@@ -40,8 +43,9 @@ public class UserController {
                 .body(new ApiResponseDto<>("user_updated", response));
     }
 
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponseDto<Void>> deleteUser(@PathVariable Long userId) {
+    @DeleteMapping
+    public ResponseEntity<ApiResponseDto<Void>> deleteUser() {
+        Long userId = currentUserProvider.getCurrentUserId();
         userService.deleteUser(userId);
         return ResponseEntity.ok(new ApiResponseDto<>("user_deleted", null));
     }
