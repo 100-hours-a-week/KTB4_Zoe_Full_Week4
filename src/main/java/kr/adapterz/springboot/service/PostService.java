@@ -3,10 +3,12 @@ package kr.adapterz.springboot.service;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.PostCreateResponseDto;
+import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PostRequestDto;
-import kr.adapterz.springboot.dto.PostResponseDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
+import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.repository.CommentRepository;
@@ -28,7 +30,7 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
 
-    public PostResponseDto createPost(PostRequestDto request) {
+    public PostCreateResponseDto createPost(PostRequestDto request) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
@@ -43,7 +45,7 @@ public class PostService {
 
         Post savedPost = postRepository.save(post);
 
-        return toResponse(savedPost, currentUserId);
+        return new PostCreateResponseDto(savedPost);
     }
 
     public ApiResponseDto<PostListResponseDto> getPosts() {
@@ -54,7 +56,7 @@ public class PostService {
         return new ApiResponseDto<>("fetch_success", new PostListResponseDto(posts));
     }
 
-    public PostResponseDto getPost(Long postId) {
+    public PostDetailResponseDto getPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
@@ -62,10 +64,10 @@ public class PostService {
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
-        return toResponse(post, currentUserId);
+        return toDetailResponse(post, currentUserId);
     }
 
-    public PostResponseDto updatePost(Long postId, PostRequestDto request) {
+    public PostUpdateResponseDto updatePost(Long postId, PostRequestDto request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
@@ -79,7 +81,7 @@ public class PostService {
         post.changeContent(request.getContent());
         post.changeImageUrl(request.getImageUrl());
 
-        return toResponse(post, currentUserId);
+        return new PostUpdateResponseDto(post);
     }
 
     public void deletePost(Long postId) {
@@ -99,13 +101,13 @@ public class PostService {
         }
     }
 
-    private PostResponseDto toResponse(Post post, Long currentUserId) {
+    private PostDetailResponseDto toDetailResponse(Post post, Long currentUserId) {
         long commentCount = commentRepository.countByPostId(post.getId());
         long likeCount = likeRepository.countByPostId(post.getId());
         boolean liked = currentUserId != null
                 && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
-        return new PostResponseDto(post, commentCount, likeCount, liked);
+        return new PostDetailResponseDto(post, commentCount, likeCount, liked);
     }
 
     private PostSummaryResponseDto toSummaryResponse(Post post) {

@@ -1,9 +1,11 @@
 package kr.adapterz.springboot.controller;
 
 import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.PostCreateResponseDto;
+import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PostRequestDto;
-import kr.adapterz.springboot.dto.PostResponseDto;
+import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,8 +20,8 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public ResponseEntity<ApiResponseDto<PostResponseDto>> createPost(@RequestBody PostRequestDto request) {
-        PostResponseDto response = postService.createPost(request);
+    public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPost(@RequestBody PostRequestDto request) {
+        PostCreateResponseDto response = postService.createPost(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponseDto<>("post_created", response));
     }
@@ -30,16 +32,16 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<PostResponseDto>> getPost(@PathVariable Long postId) {
+    public ResponseEntity<ApiResponseDto<PostDetailResponseDto>> getPost(@PathVariable Long postId) {
         return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPost(postId)));
     }
 
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<PostResponseDto>> updatePost(
+    public ResponseEntity<ApiResponseDto<PostUpdateResponseDto>> updatePost(
             @PathVariable Long postId,
             @RequestBody PostRequestDto request
     ) {
-        PostResponseDto response = postService.updatePost(postId, request);
+        PostUpdateResponseDto response = postService.updatePost(postId, request);
         return ResponseEntity.ok(new ApiResponseDto<>("post_updated", response));
     }
 
