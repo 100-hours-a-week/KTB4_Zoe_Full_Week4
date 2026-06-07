@@ -18,10 +18,10 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public ResponseEntity<PostResponseDto> createPost(@RequestBody PostRequestDto request) {
+    public ResponseEntity<ApiResponseDto<PostResponseDto>> createPost(@RequestBody PostRequestDto request) {
         PostResponseDto response = postService.createPost(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(response);
+                .body(new ApiResponseDto<>("post_created", response));
     }
 
     @GetMapping
@@ -30,23 +30,23 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<PostResponseDto> getPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(postService.getPost(postId));
+    public ResponseEntity<ApiResponseDto<PostResponseDto>> getPost(@PathVariable Long postId) {
+        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPost(postId)));
     }
 
     @PutMapping("/{postId}")
-    public ResponseEntity<PostResponseDto> updatePost(
+    public ResponseEntity<ApiResponseDto<PostResponseDto>> updatePost(
             @PathVariable Long postId,
             @RequestBody PostRequestDto request
     ) {
         PostResponseDto response = postService.updatePost(postId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponseDto<>("post_updated", response));
     }
 
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
+    public ResponseEntity<ApiResponseDto<Void>> deletePost(@PathVariable Long postId) {
         postService.deletePost(postId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponseDto<>("post_deleted", null));
     }
 
 }

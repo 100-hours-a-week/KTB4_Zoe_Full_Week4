@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.LikeResponseDto;
 import kr.adapterz.springboot.service.LikeService;
 import lombok.RequiredArgsConstructor;
@@ -15,22 +16,22 @@ public class LikeController {
     private final LikeService likeService;
 
     @PostMapping("/posts/{post_id}")
-    public ResponseEntity<LikeResponseDto> likePost(
+    public ResponseEntity<ApiResponseDto<LikeResponseDto>> likePost(
             @PathVariable("post_id") Long postId
     ) {
         LikeResponseDto response = likeService.likePost(postId);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(response);
+                .body(new ApiResponseDto<>("post_like_created", response));
     }
 
     @DeleteMapping("/posts/{post_id}")
-    public ResponseEntity<LikeResponseDto> unlikePost(
+    public ResponseEntity<ApiResponseDto<LikeResponseDto>> unlikePost(
             @PathVariable("post_id") Long postId
     ) {
         LikeResponseDto response = likeService.unlikePost(postId);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponseDto<>("post_like_deleted", response));
     }
 }
