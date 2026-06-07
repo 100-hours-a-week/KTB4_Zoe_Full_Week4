@@ -1,8 +1,8 @@
 package kr.adapterz.springboot.entity;
 
-import kr.adapterz.springboot.entity.Post;
-import kr.adapterz.springboot.entity.User;
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 public class Comment {
@@ -11,11 +11,13 @@ public class Comment {
     private String content;
     private Post post;
     private User author;
+    private LocalDateTime createdAt;
 
     public Comment(String content, Post post, User author) {
         this.content = content;
         this.post = post;
         this.author = author;
+        this.createdAt = LocalDateTime.now();
     }
 
     public void changeContent(String content) {
