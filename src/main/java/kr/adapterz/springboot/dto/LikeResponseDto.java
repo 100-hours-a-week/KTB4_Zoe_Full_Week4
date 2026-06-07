@@ -1,14 +1,22 @@
 package kr.adapterz.springboot.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 @Getter
 public class LikeResponseDto {
 
-    private long likeCount;
-    private  boolean liked;
+    @JsonProperty("post_id")
+    private Long postId;
 
-    public LikeResponseDto(long likeCount, boolean liked) {
+    @JsonProperty("like_count")
+    private long likeCount;
+
+    @JsonProperty("is_liked")
+    private boolean liked;
+
+    public LikeResponseDto(Long postId, long likeCount, boolean liked) {
+        this.postId = postId;
         this.likeCount = likeCount;
         this.liked = liked;
     }

@@ -37,7 +37,7 @@ public class LikeService {
 
         long likeCount = likeRepository.countByPostId(postId);
 
-        return new LikeResponseDto(likeCount, true);
+        return new LikeResponseDto(postId, likeCount, true);
     }
 
     public LikeResponseDto unlikePost(Long postId) {
@@ -54,7 +54,7 @@ public class LikeService {
 
         long likeCount = likeRepository.countByPostId(postId);
 
-        return new LikeResponseDto(likeCount, false);
+        return new LikeResponseDto(postId, likeCount, false);
     }
 
     public LikeResponseDto getPostLike(Long postId) {
@@ -66,6 +66,6 @@ public class LikeService {
         long likeCount = likeRepository.countByPostId(postId);
         boolean liked = likeRepository.existsByPostIdAndUserId(postId, currentUserId);
 
-        return new LikeResponseDto(likeCount, liked);
+        return new LikeResponseDto(postId, likeCount, liked);
     }
 }
