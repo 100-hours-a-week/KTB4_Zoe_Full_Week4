@@ -1,6 +1,5 @@
 package kr.adapterz.springboot.dto;
 
-import kr.adapterz.springboot.repository.LikeRepository;
 import lombok.Getter;
 
 @Getter
