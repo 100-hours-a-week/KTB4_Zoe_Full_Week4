@@ -1,30 +1,18 @@
 package kr.adapterz.springboot.repository;
 
 import kr.adapterz.springboot.entity.User;
-import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.Optional;
 
-@Repository
-public class UserRepository {
-    private final Map<Long, User> store = new HashMap<>();
-    private Long sequence = 1L;
+public interface UserRepository {
 
-    public User save(User user) {
-        user.assignId(sequence++);
-        store.put(user.getId(), user);
-        return user;
-    }
+    User save(User user);
 
-    public Optional<User> findById(Long id) {
-        return Optional.ofNullable(store.get(id));
-    }
+    Optional<User> findById(Long Id);
 
-    public Optional<User> deleteById(Long id) {
-        return Optional.ofNullable(store.remove(id));
-    }
+    Optional<User> findByEmail(String email);
 
-    public List<User> findAll() {
-        return new ArrayList<>(store.values());
-    }
+    boolean existsByEmail(String email);
+
+    boolean deleteById(Long Id);
 }
