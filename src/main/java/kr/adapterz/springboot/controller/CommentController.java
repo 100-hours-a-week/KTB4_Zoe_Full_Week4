@@ -1,9 +1,10 @@
 package kr.adapterz.springboot.controller;
 
 import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.CommentCreateResponseDto;
 import kr.adapterz.springboot.dto.CommentListResponseDto;
 import kr.adapterz.springboot.dto.CommentRequestDto;
-import kr.adapterz.springboot.dto.CommentResponseDto;
+import kr.adapterz.springboot.dto.CommentUpdateResponseDto;
 import kr.adapterz.springboot.entity.Comment;
 import kr.adapterz.springboot.service.CommentService;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +20,11 @@ public class CommentController {
     private final CommentService commentService;
 
     @PostMapping("/posts/{post_id}")
-    public ResponseEntity<ApiResponseDto<CommentResponseDto>> createComment(@PathVariable("post_id") Long postId, @RequestBody CommentRequestDto request) {
+    public ResponseEntity<ApiResponseDto<CommentCreateResponseDto>> createComment(@PathVariable("post_id") Long postId, @RequestBody CommentRequestDto request) {
 
         Comment comment = commentService.createComment(postId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponseDto<>("comment_created", new CommentResponseDto(comment)));
+                .body(new ApiResponseDto<>("comment_created", new CommentCreateResponseDto(comment)));
     }
 
     @GetMapping("/posts/{post_id}")
@@ -38,12 +39,12 @@ public class CommentController {
     }
 
     @PutMapping("/{comment_id}")
-    public ResponseEntity<ApiResponseDto<CommentResponseDto>> updateComment(
+    public ResponseEntity<ApiResponseDto<CommentUpdateResponseDto>> updateComment(
             @PathVariable("comment_id") Long commentId,
             @RequestBody CommentRequestDto request
     ) {
         Comment comment = commentService.updateComment(commentId, request);
-        return ResponseEntity.ok(new ApiResponseDto<>("comment_updated", new CommentResponseDto(comment)));
+        return ResponseEntity.ok(new ApiResponseDto<>("comment_updated", new CommentUpdateResponseDto(comment)));
     }
 
     @DeleteMapping("/{comment_id}")
