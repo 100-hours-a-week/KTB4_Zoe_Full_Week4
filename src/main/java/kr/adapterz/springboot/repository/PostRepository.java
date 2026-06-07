@@ -1,26 +1,17 @@
 package kr.adapterz.springboot.repository;
 
 import kr.adapterz.springboot.entity.Post;
-import kr.adapterz.springboot.entity.User;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
-public class PostRepository {
-    private final Map<Long, Post> store = new HashMap<>();
-    private Long sequence = 1L;
+public interface PostRepository {
 
+    Post save(Post post);
 
-    public Post save(Post post) {
-        post.assignId(sequence++);
-        store.put(post.getId(), post);
-        return post;
-    }
+    Optional<Post> findById(Long id);
 
-    public Optional<Post> findById(Long id) {
-        return Optional.ofNullable(store.get(id));
-    }
+    List<Post> findAll();
 
-    public List<Post> findAll() {
-        return new ArrayList<>(store.values());
-    }
+    boolean deleteById(Long id);
 }

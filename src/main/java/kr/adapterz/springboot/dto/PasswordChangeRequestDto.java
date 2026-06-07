@@ -1,10 +1,10 @@
 package kr.adapterz.springboot.dto;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
 public class PasswordChangeRequestDto {
     private String password;
 }
