@@ -22,6 +22,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
         user.changeNickname(request.getNickname());
+        user.changeProfileImage(request.getProfileImage());
 
         return userRepository.save(user);
     }

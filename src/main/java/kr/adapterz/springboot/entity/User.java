@@ -29,6 +29,10 @@ public class User {
         this.nickname = nickname;
     }
 
+    public void changeProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
     public void changePassword(String password) {
         this.password = password;
     }
