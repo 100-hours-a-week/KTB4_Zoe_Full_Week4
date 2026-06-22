@@ -10,13 +10,16 @@ import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
+import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostRepository;
+import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -29,7 +32,9 @@ public class PostService {
     private final CurrentUserProvider currentUserProvider;
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
+    private final PostVersionRepository postVersionRepository;
 
+    @Transactional
     public PostCreateResponseDto createPost(PostRequestDto request) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
@@ -39,15 +44,16 @@ public class PostService {
         Post post = new Post(
                 request.getTitle(),
                 request.getContent(),
-                request.getImageUrl(),
                 author
         );
+        post.replaceImages(request.getImageUrls());
 
         Post savedPost = postRepository.save(post);
 
         return new PostCreateResponseDto(savedPost);
     }
 
+    @Transactional(readOnly = true)
     public ApiResponseDto<PostListResponseDto> getPosts() {
         List<PostSummaryResponseDto> posts = postRepository.findAll().stream()
                 .map(this::toSummaryResponse)
@@ -56,17 +62,20 @@ public class PostService {
         return new ApiResponseDto<>("fetch_success", new PostListResponseDto(posts));
     }
 
+    @Transactional
     public PostDetailResponseDto getPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
         post.increaseViewCount();
+        postRepository.save(post);
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         return toDetailResponse(post, currentUserId);
     }
 
+    @Transactional
     public PostUpdateResponseDto updatePost(Long postId, PostRequestDto request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -77,13 +86,23 @@ public class PostService {
             throw new ForbiddenException("게시글 수정 권한이 없습니다.");
         }
 
+        int nextVersion = postVersionRepository.findLastVersionNumber(post.getId()) + 1;
+        postVersionRepository.save(new PostVersion(
+                post,
+                post.getAuthor(),
+                post.getTitle(),
+                post.getContent(),
+                nextVersion
+        ));
+
         post.changeTitle(request.getTitle());
         post.changeContent(request.getContent());
-        post.changeImageUrl(request.getImageUrl());
+        post.replaceImages(request.getImageUrls());
 
-        return new PostUpdateResponseDto(post);
+        return new PostUpdateResponseDto(postRepository.save(post));
     }
 
+    @Transactional
     public void deletePost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -94,11 +113,8 @@ public class PostService {
             throw new ForbiddenException("게시글 삭제 권한이 없습니다.");
         }
 
-        boolean deleted = postRepository.deleteById(postId);
-
-        if (!deleted) {
-            throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
-        }
+        post.delete();
+        postRepository.save(post);
     }
 
     private PostDetailResponseDto toDetailResponse(Post post, Long currentUserId) {
@@ -106,14 +122,16 @@ public class PostService {
         long likeCount = likeRepository.countByPostId(post.getId());
         boolean liked = currentUserId != null
                 && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
+        boolean edited = postVersionRepository.existsByPostId(post.getId());
 
-        return new PostDetailResponseDto(post, commentCount, likeCount, liked);
+        return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited);
     }
 
     private PostSummaryResponseDto toSummaryResponse(Post post) {
         long commentCount = commentRepository.countByPostId(post.getId());
         long likeCount = likeRepository.countByPostId(post.getId());
+        boolean edited = postVersionRepository.existsByPostId(post.getId());
 
-        return new PostSummaryResponseDto(post, likeCount, commentCount);
+        return new PostSummaryResponseDto(post, likeCount, commentCount, edited);
     }
 }

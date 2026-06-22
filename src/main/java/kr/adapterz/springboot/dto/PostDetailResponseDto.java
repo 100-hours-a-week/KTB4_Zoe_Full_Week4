@@ -6,6 +6,7 @@ import kr.adapterz.springboot.entity.Post;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 public class PostDetailResponseDto {
@@ -20,8 +21,8 @@ public class PostDetailResponseDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
-    @JsonProperty("image_url")
-    private String imageUrl;
+    @JsonProperty("image_urls")
+    private List<String> imageUrls;
 
     private String content;
 
@@ -37,21 +38,28 @@ public class PostDetailResponseDto {
     @JsonProperty("is_liked")
     private boolean liked;
 
+    @JsonProperty("is_edited")
+    private boolean edited;
+
     public PostDetailResponseDto(
             Post post,
             long commentCount,
             long likeCount,
-            boolean liked
+            boolean liked,
+            boolean edited
     ) {
         this.postId = post.getId();
         this.title = post.getTitle();
         this.writer = new WriterResponseDto(post.getAuthor());
         this.createdAt = post.getCreatedAt();
-        this.imageUrl = post.getImageUrl();
+        this.imageUrls = post.getImages().stream()
+                .map(image -> image.getImageUrl())
+                .toList();
         this.content = post.getContent();
         this.commentCount = commentCount;
         this.likeCount = likeCount;
         this.viewCount = post.getViewCount();
         this.liked = liked;
+        this.edited = edited;
     }
 }

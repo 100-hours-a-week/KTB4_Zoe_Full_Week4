@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import kr.adapterz.springboot.entity.Post;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public class PostUpdateResponseDto {
 
@@ -13,13 +15,15 @@ public class PostUpdateResponseDto {
     private String title;
     private String content;
 
-    @JsonProperty("image_url")
-    private String imageUrl;
+    @JsonProperty("image_urls")
+    private List<String> imageUrls;
 
     public PostUpdateResponseDto(Post post) {
         this.postId = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
-        this.imageUrl = post.getImageUrl();
+        this.imageUrls = post.getImages().stream()
+                .map(image -> image.getImageUrl())
+                .toList();
     }
 }

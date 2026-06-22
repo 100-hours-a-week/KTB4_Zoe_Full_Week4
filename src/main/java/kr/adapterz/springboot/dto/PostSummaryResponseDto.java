@@ -15,8 +15,8 @@ public class PostSummaryResponseDto {
 
     private String title;
 
-    @JsonProperty("image_url")
-    private String imageUrl;
+    @JsonProperty("thumbnail_url")
+    private String thumbnailUrl;
 
     @JsonProperty("created_at")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -31,16 +31,20 @@ public class PostSummaryResponseDto {
     @JsonProperty("view_count")
     private long viewCount;
 
+    @JsonProperty("is_edited")
+    private boolean edited;
+
     private WriterResponseDto writer;
 
-    public PostSummaryResponseDto(Post post, long likeCount, long commentCount) {
+    public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited) {
         this.postId = post.getId();
         this.title = post.getTitle();
-        this.imageUrl = post.getImageUrl();
+        this.thumbnailUrl = post.getThumbnailUrl();
         this.createdAt = post.getCreatedAt();
         this.likeCount = likeCount;
         this.commentCount = commentCount;
         this.viewCount = post.getViewCount();
+        this.edited = edited;
         this.writer = new WriterResponseDto(post.getAuthor());
     }
 }
