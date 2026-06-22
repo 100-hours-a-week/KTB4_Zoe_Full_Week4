@@ -2,6 +2,7 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
+import kr.adapterz.springboot.auth.UnauthorizedException;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
@@ -10,18 +11,23 @@ import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
+import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostRepository;
+import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +39,8 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
     private final PostVersionRepository postVersionRepository;
+    private final PostViewRepository postViewRepository;
+    private final HttpServletRequest request;
 
     @Transactional
     public PostCreateResponseDto createPost(PostRequestDto request) {
@@ -67,10 +75,8 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        post.increaseViewCount();
-        postRepository.save(post);
-
-        Long currentUserId = currentUserProvider.getCurrentUserId();
+        Long currentUserId = getCurrentUserIdOrNull();
+        increaseViewCountIfAllowed(post, currentUserId);
 
         return toDetailResponse(post, currentUserId);
     }
@@ -133,5 +139,65 @@ public class PostService {
         boolean edited = postVersionRepository.existsByPostId(post.getId());
 
         return new PostSummaryResponseDto(post, likeCount, commentCount, edited);
+    }
+
+    private Long getCurrentUserIdOrNull() {
+        try {
+            Long currentUserId = currentUserProvider.getCurrentUserId();
+            return userRepository.findById(currentUserId)
+                    .filter(user -> !user.isDeleted())
+                    .map(User::getId)
+                    .orElse(null);
+        } catch (UnauthorizedException e) {
+            return null;
+        }
+    }
+
+    private void increaseViewCountIfAllowed(Post post, Long currentUserId) {
+        LocalDateTime now = LocalDateTime.now();
+        User viewer = findViewer(currentUserId);
+        String viewerKey = createViewerKey(currentUserId);
+
+        PostView postView = postViewRepository.findByPostIdAndViewerKey(post.getId(), viewerKey)
+                .orElse(null);
+
+        if (postView == null) {
+            post.increaseViewCount();
+            postViewRepository.save(new PostView(post, viewer, viewerKey, now));
+            return;
+        }
+
+        if (postView.canIncreaseViewCount(now)) {
+            post.increaseViewCount();
+            postView.updateLastViewedAt(now);
+        }
+    }
+
+    private User findViewer(Long currentUserId) {
+        if (currentUserId == null) {
+            return null;
+        }
+
+        return userRepository.findById(currentUserId)
+                .filter(user -> !user.isDeleted())
+                .orElse(null);
+    }
+
+    private String createViewerKey(Long currentUserId) {
+        if (currentUserId != null) {
+            return "USER:" + currentUserId;
+        }
+
+        String userAgent = Objects.toString(request.getHeader("User-Agent"), "");
+        return "GUEST:" + getClientIp() + ":" + Integer.toHexString(userAgent.hashCode());
+    }
+
+    private String getClientIp() {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
     }
 }
