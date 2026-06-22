@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import jakarta.validation.Valid;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
@@ -33,7 +34,7 @@ public class UserController {
 
     @PutMapping
     public ResponseEntity<ApiResponseDto<UserUpdateResponseDto>> putUser(
-            @RequestBody UserUpdateRequestDto request
+            @Valid @RequestBody UserUpdateRequestDto request
     ) {
         Long userId = currentUserProvider.getCurrentUserId();
         User user = userService.updateUser(userId, request);
