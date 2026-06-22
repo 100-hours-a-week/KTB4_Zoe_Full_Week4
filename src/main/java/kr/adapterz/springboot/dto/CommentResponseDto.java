@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 @Getter
 public class CommentResponseDto {
 
+    private static final String DELETED_USER_NICKNAME = "알 수 없음";
+
     @JsonProperty("comment_id")
     private Long commentId;
 
@@ -30,8 +32,15 @@ public class CommentResponseDto {
     public CommentResponseDto(Comment comment) {
         this.commentId = comment.getId();
         this.userId = comment.getAuthor().getId();
-        this.nickname = comment.getAuthor().getNickname();
-        this.profileImage = comment.getAuthor().getProfileImage();
+
+        if (comment.getAuthor().isDeleted()) {
+            this.nickname = DELETED_USER_NICKNAME;
+            this.profileImage = null;
+        } else {
+            this.nickname = comment.getAuthor().getNickname();
+            this.profileImage = comment.getAuthor().getProfileImage();
+        }
+
         this.createdAt = comment.getCreatedAt();
         this.content = comment.getContent();
     }

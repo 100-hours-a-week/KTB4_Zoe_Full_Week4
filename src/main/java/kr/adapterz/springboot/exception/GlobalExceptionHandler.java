@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.FORBIDDEN, "access_denied");
     }
 
+    @ExceptionHandler(DeletedUserException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDeletedUser(DeletedUserException e) {
+        return error(HttpStatus.FORBIDDEN, "user_deleted");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponseDto<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> errors = new LinkedHashMap<>();

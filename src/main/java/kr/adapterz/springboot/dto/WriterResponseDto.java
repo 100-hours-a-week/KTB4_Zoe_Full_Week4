@@ -7,6 +7,8 @@ import lombok.Getter;
 @Getter
 public class WriterResponseDto {
 
+    private static final String DELETED_USER_NICKNAME = "알 수 없음";
+
     @JsonProperty("user_id")
     private Long userId;
 
@@ -17,6 +19,13 @@ public class WriterResponseDto {
 
     public WriterResponseDto(User user) {
         this.userId = user.getId();
+
+        if (user.isDeleted()) {
+            this.nickname = DELETED_USER_NICKNAME;
+            this.profileImage = null;
+            return;
+        }
+
         this.nickname = user.getNickname();
         this.profileImage = user.getProfileImage();
     }
