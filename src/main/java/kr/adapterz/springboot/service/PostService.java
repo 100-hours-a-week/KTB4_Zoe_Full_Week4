@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
@@ -14,13 +15,13 @@ import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.PostRateLimitExceededException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,9 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class PostService {
+
+    private static final long MAX_POSTS_PER_MINUTE = 3L;
+    private static final long POST_LIMIT_WINDOW_MINUTES = 1L;
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -48,6 +52,8 @@ public class PostService {
 
         User author = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        validatePostRateLimit(currentUserId);
 
         Post post = new Post(
                 request.getTitle(),
@@ -139,6 +145,15 @@ public class PostService {
         boolean edited = postVersionRepository.existsByPostId(post.getId());
 
         return new PostSummaryResponseDto(post, likeCount, commentCount, edited);
+    }
+
+    private void validatePostRateLimit(Long currentUserId) {
+        LocalDateTime windowStart = LocalDateTime.now().minusMinutes(POST_LIMIT_WINDOW_MINUTES);
+        long recentPostCount = postRepository.countByAuthorIdAndCreatedAtAfter(currentUserId, windowStart);
+
+        if (recentPostCount >= MAX_POSTS_PER_MINUTE) {
+            throw new PostRateLimitExceededException();
+        }
     }
 
     private Long getCurrentUserIdOrNull() {
