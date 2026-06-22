@@ -10,6 +10,7 @@ import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ public class LikeService {
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
 
+    @Transactional
     public LikeResponseDto likePost(Long postId) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
@@ -40,15 +42,16 @@ public class LikeService {
         return new LikeResponseDto(postId, likeCount, true);
     }
 
+    @Transactional
     public LikeResponseDto unlikePost(Long postId) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        boolean deleted = likeRepository.deleteByPostIdAndUserId(postId, currentUserId);
+        long deletedCount = likeRepository.deleteByPostIdAndUserId(postId, currentUserId);
 
-        if (!deleted) {
+        if (deletedCount == 0) {
             throw new IllegalArgumentException("좋아요를 누르지 않은 게시글입니다.");
         }
 
@@ -57,6 +60,7 @@ public class LikeService {
         return new LikeResponseDto(postId, likeCount, false);
     }
 
+    @Transactional(readOnly = true)
     public LikeResponseDto getPostLike(Long postId) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 

@@ -1,6 +1,7 @@
 package kr.adapterz.springboot.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import kr.adapterz.springboot.auth.TokenPair;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.LoginRequestDto;
@@ -22,7 +23,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponseDto<Void>> signup(@RequestBody SignupRequestDto request) {
+    public ResponseEntity<ApiResponseDto<Void>> signup(@Valid @RequestBody SignupRequestDto request) {
         authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponseDto<>("user_created", null));
@@ -30,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponseDto<Void>> login(
-            @RequestBody LoginRequestDto request,
+            @Valid @RequestBody LoginRequestDto request,
             HttpServletResponse response
     ) {
         TokenPair tokens = authService.login(request);
@@ -113,10 +114,9 @@ public class AuthController {
 
     @PutMapping("/password")
     public ResponseEntity<ApiResponseDto<Void>> changePassword(
-            @CookieValue(name = "accessToken", required = false) String accessToken,
-            @RequestBody PasswordChangeRequestDto request
+            @Valid @RequestBody PasswordChangeRequestDto request
     ) {
-        authService.changePassword(accessToken, request);
+        authService.changePassword(request);
         return ResponseEntity.ok(new ApiResponseDto<>("password_updated", null));
     }
 }

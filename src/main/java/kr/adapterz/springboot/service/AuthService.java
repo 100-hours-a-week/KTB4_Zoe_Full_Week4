@@ -2,6 +2,7 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.JwtTokenProvider;
 import kr.adapterz.springboot.auth.TokenPair;
+import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.LoginRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
 import kr.adapterz.springboot.dto.SignupRequestDto;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final CurrentUserProvider currentUserProvider;
 
     public void signup(SignupRequestDto request) {
 
@@ -22,8 +24,7 @@ public class AuthService {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
 
-        User user = new User(
-                null,
+        User user = User.of(
                 request.getEmail(),
                 request.getPassword(),
                 request.getNickname(),
@@ -51,8 +52,8 @@ public class AuthService {
         return jwtTokenProvider.createTokenPair(userId);
     }
 
-    public void changePassword(String accessToken, PasswordChangeRequestDto request) {
-        Long userId = jwtTokenProvider.getUserId(accessToken);
+    public void changePassword(PasswordChangeRequestDto request) {
+        Long userId = currentUserProvider.getCurrentUserId();
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));

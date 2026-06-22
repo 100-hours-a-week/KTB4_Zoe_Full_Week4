@@ -1,19 +1,13 @@
 package kr.adapterz.springboot.repository;
 
 import kr.adapterz.springboot.entity.Comment;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
-public interface CommentRepository {
-
-    Comment save(Comment comment);
-
-    Optional<Comment> findById(Long id);
+public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     List<Comment> findByPostId(Long postId);
-
-    boolean deleteById(Long id);
 
     long countByPostId(Long postId);
 }

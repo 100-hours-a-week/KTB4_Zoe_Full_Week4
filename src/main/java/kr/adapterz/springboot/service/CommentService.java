@@ -14,6 +14,7 @@ import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -26,6 +27,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
 
+    @Transactional
     public Comment createComment(Long postId, CommentRequestDto request) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
@@ -44,6 +46,7 @@ public class CommentService {
         return commentRepository.save(comment);
     }
 
+    @Transactional(readOnly = true)
     public List<Comment> getComments(Long postId) {
         postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -51,6 +54,7 @@ public class CommentService {
         return commentRepository.findByPostId(postId);
     }
 
+    @Transactional(readOnly = true)
     public CommentListResponseDto getComments(Long postId, int page, int size) {
         postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -69,6 +73,7 @@ public class CommentService {
         return new CommentListResponseDto(response, new PaginationResponseDto(safePage, safeSize, hasNext));
     }
 
+    @Transactional
     public Comment updateComment(Long commentId, CommentRequestDto request) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
@@ -84,6 +89,7 @@ public class CommentService {
         return commentRepository.save(comment);
     }
 
+    @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
@@ -94,10 +100,7 @@ public class CommentService {
             throw new ForbiddenException("댓글 삭제 권한이 없습니다.");
         }
 
-        boolean deleted = commentRepository.deleteById(commentId);
-
-        if (!deleted) {
-            throw new IllegalArgumentException("댓글을 찾을 수 없습니다.");
-        }
+        comment.deleteKeepingThread();
+        commentRepository.save(comment);
     }
 }
