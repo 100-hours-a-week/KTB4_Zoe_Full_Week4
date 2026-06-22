@@ -37,10 +37,13 @@ public class CommentService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
+        Comment parent = findParentComment(request.getParentId(), postId);
+
         Comment comment = new Comment(
                 request.getContent(),
                 post,
-                author
+                author,
+                parent
         );
 
         return commentRepository.save(comment);
@@ -102,5 +105,20 @@ public class CommentService {
 
         comment.deleteKeepingThread();
         commentRepository.save(comment);
+    }
+
+    private Comment findParentComment(Long parentId, Long postId) {
+        if (parentId == null) {
+            return null;
+        }
+
+        Comment parent = commentRepository.findById(parentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+
+        if (!parent.getPost().getId().equals(postId)) {
+            throw new IllegalArgumentException("부모 댓글이 게시글에 속하지 않습니다.");
+        }
+
+        return parent;
     }
 }

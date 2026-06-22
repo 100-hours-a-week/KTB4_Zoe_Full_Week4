@@ -15,6 +15,9 @@ public class CommentResponseDto {
     @JsonProperty("comment_id")
     private Long commentId;
 
+    @JsonProperty("parent_id")
+    private Long parentId;
+
     @JsonProperty("user_id")
     private Long userId;
 
@@ -31,6 +34,7 @@ public class CommentResponseDto {
 
     public CommentResponseDto(Comment comment) {
         this.commentId = comment.getId();
+        this.parentId = comment.getParent() == null ? null : comment.getParent().getId();
         this.userId = comment.getAuthor().getId();
 
         if (comment.getAuthor().isDeleted()) {

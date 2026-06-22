@@ -63,6 +63,10 @@ public class Comment {
     }
 
     public void deleteKeepingThread() {
+        if (deletedAt != null) {
+            return;
+        }
+
         this.content = "삭제된 댓글입니다";
         this.status = CommentStatus.DELETED;
         this.deletedAt = LocalDateTime.now();
