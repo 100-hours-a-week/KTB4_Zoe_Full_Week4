@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
-import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
@@ -77,11 +76,11 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public ApiResponseDto<PostListResponseDto> getPosts() {
+    public PostListResponseDto getPosts() {
         List<Post> postEntities = postRepository.findAllWithAuthorAndImages();
 
         if (postEntities.isEmpty()) {
-            return new ApiResponseDto<>("fetch_success", new PostListResponseDto(List.of()));
+            return new PostListResponseDto(List.of());
         }
 
         List<Long> postIds = postEntities.stream()
@@ -95,7 +94,7 @@ public class PostService {
                 .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds))
                 .toList();
 
-        return new ApiResponseDto<>("fetch_success", new PostListResponseDto(posts));
+        return new PostListResponseDto(posts);
     }
 
     @Transactional

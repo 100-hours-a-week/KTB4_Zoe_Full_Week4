@@ -28,7 +28,7 @@ public class PostController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PostListResponseDto>> getPosts() {
-        return ResponseEntity.ok(postService.getPosts());
+        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPosts()));
     }
 
     @GetMapping("/{postId}")
