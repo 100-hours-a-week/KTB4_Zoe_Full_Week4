@@ -15,6 +15,7 @@ import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
@@ -80,6 +81,10 @@ public class PostService {
     public PostDetailResponseDto getPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        if (post.isBlinded()) {
+            throw new PostBlindedException();
+        }
 
         Long currentUserId = getCurrentUserIdOrNull();
         increaseViewCountIfAllowed(post, currentUserId);

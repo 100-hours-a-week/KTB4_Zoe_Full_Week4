@@ -35,6 +35,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.TOO_MANY_REQUESTS, "post_rate_limited");
     }
 
+    @ExceptionHandler(DuplicatePostReportException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDuplicatePostReport(DuplicatePostReportException e) {
+        return error(HttpStatus.CONFLICT, "post_already_reported");
+    }
+
+    @ExceptionHandler(PostBlindedException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePostBlinded(PostBlindedException e) {
+        return error(HttpStatus.FORBIDDEN, "post_blinded");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponseDto<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> errors = new LinkedHashMap<>();

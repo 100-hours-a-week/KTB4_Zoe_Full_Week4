@@ -80,6 +80,10 @@ public class Post {
         this.status = PostStatus.BLINDED;
     }
 
+    public boolean isBlinded() {
+        return status == PostStatus.BLINDED;
+    }
+
     public void replaceImages(List<String> imageUrls) {
         this.images.clear();
 

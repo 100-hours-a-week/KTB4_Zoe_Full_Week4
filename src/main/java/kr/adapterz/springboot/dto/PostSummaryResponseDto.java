@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 @Getter
 public class PostSummaryResponseDto {
 
+    private static final String BLINDED_POST_TITLE = "숨김 처리된 게시글";
+
     @JsonProperty("post_id")
     private Long postId;
 
@@ -38,8 +40,8 @@ public class PostSummaryResponseDto {
 
     public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited) {
         this.postId = post.getId();
-        this.title = post.getTitle();
-        this.thumbnailUrl = post.getThumbnailUrl();
+        this.title = post.isBlinded() ? BLINDED_POST_TITLE : post.getTitle();
+        this.thumbnailUrl = post.isBlinded() ? null : post.getThumbnailUrl();
         this.createdAt = post.getCreatedAt();
         this.likeCount = likeCount;
         this.commentCount = commentCount;
