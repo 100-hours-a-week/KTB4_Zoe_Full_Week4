@@ -3,6 +3,7 @@ package kr.adapterz.springboot.repository;
 import kr.adapterz.springboot.entity.Like;
 import kr.adapterz.springboot.entity.LikeId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,4 +24,8 @@ public interface LikeRepository extends JpaRepository<Like, LikeId> {
             group by l.post.id
             """)
     List<PostCountProjection> countByPostIdIn(@Param("postIds") List<Long> postIds);
+
+    @Modifying
+    @Query("delete from Like l where l.post.id = :postId")
+    int deleteAllByPostId(@Param("postId") Long postId);
 }

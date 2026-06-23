@@ -22,6 +22,7 @@ import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostCountProjection;
+import kr.adapterz.springboot.repository.PostDraftRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
@@ -51,6 +52,7 @@ public class PostService {
     private final LikeRepository likeRepository;
     private final PostVersionRepository postVersionRepository;
     private final PostViewRepository postViewRepository;
+    private final PostDraftRepository postDraftRepository;
     private final HttpServletRequest request;
 
     @Transactional
@@ -116,7 +118,6 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
 
-
         Long currentUserId = currentUserProvider.getCurrentUserId();
         if (!post.getAuthor().getId().equals(currentUserId)) {
             throw new ForbiddenException("게시글 수정 권한이 없습니다.");
@@ -150,6 +151,7 @@ public class PostService {
         }
 
         post.delete();
+        deletePostVolatileData(post.getId());
         postRepository.save(post);
     }
 
@@ -179,6 +181,12 @@ public class PostService {
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {
         return countProjections.stream()
                 .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCountValue));
+    }
+
+    private void deletePostVolatileData(Long postId) {
+        likeRepository.deleteAllByPostId(postId);
+        postViewRepository.deleteAllByPostId(postId);
+        postDraftRepository.deleteAllByPostId(postId);
     }
 
     private void validatePostRateLimit(Long currentUserId) {
