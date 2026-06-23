@@ -19,6 +19,7 @@ import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
+import kr.adapterz.springboot.repository.PostCountProjection;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
@@ -29,7 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,8 +74,21 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public ApiResponseDto<PostListResponseDto> getPosts() {
-        List<PostSummaryResponseDto> posts = postRepository.findAll().stream()
-                .map(this::toSummaryResponse)
+        List<Post> postEntities = postRepository.findAllWithAuthorAndImages();
+
+        if (postEntities.isEmpty()) {
+            return new ApiResponseDto<>("fetch_success", new PostListResponseDto(List.of()));
+        }
+
+        List<Long> postIds = postEntities.stream()
+                .map(Post::getId)
+                .toList();
+        Map<Long, Long> commentCounts = toCountMap(commentRepository.countByPostIdIn(postIds));
+        Map<Long, Long> likeCounts = toCountMap(likeRepository.countByPostIdIn(postIds));
+        Set<Long> editedPostIds = postVersionRepository.findEditedPostIds(postIds);
+
+        List<PostSummaryResponseDto> posts = postEntities.stream()
+                .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds))
                 .toList();
 
         return new ApiResponseDto<>("fetch_success", new PostListResponseDto(posts));
@@ -144,12 +161,22 @@ public class PostService {
         return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited);
     }
 
-    private PostSummaryResponseDto toSummaryResponse(Post post) {
-        long commentCount = commentRepository.countByPostId(post.getId());
-        long likeCount = likeRepository.countByPostId(post.getId());
-        boolean edited = postVersionRepository.existsByPostId(post.getId());
+    private PostSummaryResponseDto toSummaryResponse(
+            Post post,
+            Map<Long, Long> likeCounts,
+            Map<Long, Long> commentCounts,
+            Set<Long> editedPostIds
+    ) {
+        long commentCount = commentCounts.getOrDefault(post.getId(), 0L);
+        long likeCount = likeCounts.getOrDefault(post.getId(), 0L);
+        boolean edited = editedPostIds.contains(post.getId());
 
         return new PostSummaryResponseDto(post, likeCount, commentCount, edited);
+    }
+
+    private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {
+        return countProjections.stream()
+                .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCountValue));
     }
 
     private void validatePostRateLimit(Long currentUserId) {
