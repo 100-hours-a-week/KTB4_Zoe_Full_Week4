@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import jakarta.validation.Valid;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.CommentCreateResponseDto;
 import kr.adapterz.springboot.dto.CommentListResponseDto;
@@ -20,7 +21,10 @@ public class CommentController {
     private final CommentService commentService;
 
     @PostMapping("/posts/{post_id}")
-    public ResponseEntity<ApiResponseDto<CommentCreateResponseDto>> createComment(@PathVariable("post_id") Long postId, @RequestBody CommentRequestDto request) {
+    public ResponseEntity<ApiResponseDto<CommentCreateResponseDto>> createComment(
+            @PathVariable("post_id") Long postId,
+            @Valid @RequestBody CommentRequestDto request
+    ) {
 
         Comment comment = commentService.createComment(postId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -41,7 +45,7 @@ public class CommentController {
     @PutMapping("/{comment_id}")
     public ResponseEntity<ApiResponseDto<CommentUpdateResponseDto>> updateComment(
             @PathVariable("comment_id") Long commentId,
-            @RequestBody CommentRequestDto request
+            @Valid @RequestBody CommentRequestDto request
     ) {
         Comment comment = commentService.updateComment(commentId, request);
         return ResponseEntity.ok(new ApiResponseDto<>("comment_updated", new CommentUpdateResponseDto(comment)));

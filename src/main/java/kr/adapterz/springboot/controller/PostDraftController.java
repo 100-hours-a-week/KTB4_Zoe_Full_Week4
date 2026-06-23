@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import jakarta.validation.Valid;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.PostDraftRequestDto;
 import kr.adapterz.springboot.dto.PostDraftResponseDto;
@@ -17,7 +18,7 @@ public class PostDraftController {
 
     @PutMapping
     public ResponseEntity<ApiResponseDto<PostDraftResponseDto>> saveDraft(
-            @RequestBody PostDraftRequestDto request
+            @Valid @RequestBody PostDraftRequestDto request
     ) {
         PostDraftResponseDto response = postDraftService.saveDraft(request);
         return ResponseEntity.ok(new ApiResponseDto<>("draft_saved", response));

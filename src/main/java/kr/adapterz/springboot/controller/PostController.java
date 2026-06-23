@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import jakarta.validation.Valid;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
@@ -20,7 +21,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPost(@RequestBody PostRequestDto request) {
+    public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPost(@Valid @RequestBody PostRequestDto request) {
         PostCreateResponseDto response = postService.createPost(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponseDto<>("post_created", response));
@@ -39,7 +40,7 @@ public class PostController {
     @PutMapping("/{postId}")
     public ResponseEntity<ApiResponseDto<PostUpdateResponseDto>> updatePost(
             @PathVariable Long postId,
-            @RequestBody PostRequestDto request
+            @Valid @RequestBody PostRequestDto request
     ) {
         PostUpdateResponseDto response = postService.updatePost(postId, request);
         return ResponseEntity.ok(new ApiResponseDto<>("post_updated", response));

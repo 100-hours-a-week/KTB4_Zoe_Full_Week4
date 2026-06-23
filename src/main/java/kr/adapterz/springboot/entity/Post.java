@@ -84,6 +84,10 @@ public class Post {
         return status == PostStatus.BLINDED;
     }
 
+    public boolean isDeleted() {
+        return status == PostStatus.DELETED;
+    }
+
     public void replaceImages(List<String> imageUrls) {
         this.images.clear();
 

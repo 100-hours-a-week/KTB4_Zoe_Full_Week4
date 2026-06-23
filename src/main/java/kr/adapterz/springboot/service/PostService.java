@@ -11,6 +11,7 @@ import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
+import kr.adapterz.springboot.entity.PostStatus;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
@@ -77,7 +78,7 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public PostListResponseDto getPosts() {
-        List<Post> postEntities = postRepository.findAllWithAuthorAndImages();
+        List<Post> postEntities = postRepository.findAllByStatusNotWithAuthorAndImages(PostStatus.DELETED);
 
         if (postEntities.isEmpty()) {
             return new PostListResponseDto(List.of());
@@ -101,6 +102,10 @@ public class PostService {
     public PostDetailResponseDto getPost(Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+
+        if (post.isDeleted()) {
+            throw new PostNotFoundException();
+        }
 
         if (post.isBlinded()) {
             throw new PostBlindedException();
