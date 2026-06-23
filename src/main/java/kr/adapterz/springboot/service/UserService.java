@@ -3,6 +3,7 @@ package kr.adapterz.springboot.service;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public User getUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
         return user;
@@ -26,7 +27,7 @@ public class UserService {
     @Transactional
     public User updateUser(Long userId, UserUpdateRequestDto request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
 
@@ -39,7 +40,7 @@ public class UserService {
     @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("삭제할 사용자를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
 

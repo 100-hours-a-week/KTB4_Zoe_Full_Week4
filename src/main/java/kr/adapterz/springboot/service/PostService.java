@@ -16,7 +16,9 @@ import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.PostBlindedException;
+import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostCountProjection;
@@ -56,7 +58,7 @@ public class PostService {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validatePostRateLimit(currentUserId);
 
@@ -97,7 +99,7 @@ public class PostService {
     @Transactional
     public PostDetailResponseDto getPost(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         if (post.isBlinded()) {
             throw new PostBlindedException();
@@ -112,7 +114,7 @@ public class PostService {
     @Transactional
     public PostUpdateResponseDto updatePost(Long postId, PostRequestDto request) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
@@ -139,7 +141,7 @@ public class PostService {
     @Transactional
     public void deletePost(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
 
         Long currentUserId = currentUserProvider.getCurrentUserId();

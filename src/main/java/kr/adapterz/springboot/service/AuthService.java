@@ -8,6 +8,9 @@ import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
 import kr.adapterz.springboot.dto.SignupRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
+import kr.adapterz.springboot.exception.DuplicateEmailException;
+import kr.adapterz.springboot.exception.InvalidLoginException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,7 +25,7 @@ public class AuthService {
     public void signup(SignupRequestDto request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+            throw new DuplicateEmailException();
         }
 
         User user = User.of(
@@ -37,10 +40,10 @@ public class AuthService {
 
     public TokenPair login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
+                .orElseThrow(InvalidLoginException::new);
 
         if (!user.getPassword().equals(request.getPassword())) {
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new InvalidLoginException();
         }
 
         validateActiveUser(user);
@@ -52,7 +55,7 @@ public class AuthService {
     public TokenPair reissue(String refreshToken) {
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
 
@@ -63,7 +66,7 @@ public class AuthService {
         Long userId = currentUserProvider.getCurrentUserId();
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
 

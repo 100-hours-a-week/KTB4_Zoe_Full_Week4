@@ -45,6 +45,51 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.FORBIDDEN, "post_blinded");
     }
 
+    @ExceptionHandler(PostNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePostNotFound(PostNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, "post_not_found");
+    }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleCommentNotFound(CommentNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, "comment_not_found");
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleUserNotFound(UserNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, "user_not_found");
+    }
+
+    @ExceptionHandler(PostDraftNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePostDraftNotFound(PostDraftNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, "post_draft_not_found");
+    }
+
+    @ExceptionHandler(DuplicatePostLikeException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDuplicatePostLike(DuplicatePostLikeException e) {
+        return error(HttpStatus.CONFLICT, "post_already_liked");
+    }
+
+    @ExceptionHandler(PostLikeNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePostLikeNotFound(PostLikeNotFoundException e) {
+        return error(HttpStatus.CONFLICT, "post_not_liked");
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDuplicateEmail(DuplicateEmailException e) {
+        return error(HttpStatus.CONFLICT, "email_already_exists");
+    }
+
+    @ExceptionHandler(InvalidLoginException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleInvalidLogin(InvalidLoginException e) {
+        return error(HttpStatus.UNAUTHORIZED, "invalid_login");
+    }
+
+    @ExceptionHandler(ParentCommentMismatchException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleParentCommentMismatch(ParentCommentMismatchException e) {
+        return error(HttpStatus.BAD_REQUEST, "parent_comment_mismatch");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponseDto<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -55,33 +100,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ApiResponseDto<>("validation_failed", errors));
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponseDto<Void>> handleIllegalArgument(IllegalArgumentException e) {
-        String message = e.getMessage();
-
-        if (message != null && message.contains("게시글을 찾을 수 없습니다.")) {
-            return error(HttpStatus.NOT_FOUND, "post_not_found");
-        }
-
-        if (message != null && message.contains("댓글을 찾을 수 없습니다.")) {
-            return error(HttpStatus.NOT_FOUND, "comment_not_found");
-        }
-
-        if (message != null && (message.contains("유저를 찾을 수 없습니다.") || message.contains("사용자를 찾을 수 없습니다."))) {
-            return error(HttpStatus.NOT_FOUND, "user_not_found");
-        }
-
-        if (message != null && message.contains("이미 좋아요를 누른 게시글입니다.")) {
-            return error(HttpStatus.CONFLICT, "post_already_liked");
-        }
-
-        if (message != null && message.contains("좋아요를 누르지 않은 게시글입니다.")) {
-            return error(HttpStatus.CONFLICT, "post_not_liked");
-        }
-
-        return error(HttpStatus.BAD_REQUEST, "invalid_request");
     }
 
     @ExceptionHandler(Exception.class)

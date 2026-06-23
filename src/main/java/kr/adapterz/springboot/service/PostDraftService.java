@@ -7,6 +7,9 @@ import kr.adapterz.springboot.dto.PostDraftResponseDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostDraft;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.PostDraftNotFoundException;
+import kr.adapterz.springboot.exception.PostNotFoundException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.PostDraftRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
@@ -29,7 +32,7 @@ public class PostDraftService {
     public PostDraftResponseDto saveDraft(PostDraftRequestDto request) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
         User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         Post post = findPostForDraft(request.getPostId(), currentUserId);
         String draftKey = createDraftKey(request.getPostId());
@@ -57,7 +60,7 @@ public class PostDraftService {
         String draftKey = createDraftKey(postId);
 
         PostDraft draft = postDraftRepository.findByUserIdAndDraftKey(currentUserId, draftKey)
-                .orElseThrow(() -> new IllegalArgumentException("임시저장을 찾을 수 없습니다."));
+                .orElseThrow(PostDraftNotFoundException::new);
 
         return new PostDraftResponseDto(draft);
     }
@@ -68,7 +71,7 @@ public class PostDraftService {
         }
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         if (!post.getAuthor().getId().equals(currentUserId)) {
             throw new ForbiddenException("게시글 임시저장 권한이 없습니다.");

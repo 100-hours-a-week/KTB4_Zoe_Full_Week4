@@ -5,6 +5,10 @@ import kr.adapterz.springboot.dto.LikeResponseDto;
 import kr.adapterz.springboot.entity.Like;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.DuplicatePostLikeException;
+import kr.adapterz.springboot.exception.PostLikeNotFoundException;
+import kr.adapterz.springboot.exception.PostNotFoundException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
@@ -26,13 +30,13 @@ public class LikeService {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         if (likeRepository.existsByPostIdAndUserId(postId, currentUserId)) {
-            throw new IllegalArgumentException("이미 좋아요를 누른 게시글입니다.");
+            throw new DuplicatePostLikeException();
         }
 
         likeRepository.save(new Like(post, user));
@@ -47,12 +51,12 @@ public class LikeService {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         long deletedCount = likeRepository.deleteByPostIdAndUserId(postId, currentUserId);
 
         if (deletedCount == 0) {
-            throw new IllegalArgumentException("좋아요를 누르지 않은 게시글입니다.");
+            throw new PostLikeNotFoundException();
         }
 
         long likeCount = likeRepository.countByPostId(postId);
@@ -65,7 +69,7 @@ public class LikeService {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         long likeCount = likeRepository.countByPostId(postId);
         boolean liked = likeRepository.existsByPostIdAndUserId(postId, currentUserId);

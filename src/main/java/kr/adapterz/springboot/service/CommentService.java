@@ -9,6 +9,10 @@ import kr.adapterz.springboot.dto.PaginationResponseDto;
 import kr.adapterz.springboot.entity.Comment;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.CommentNotFoundException;
+import kr.adapterz.springboot.exception.ParentCommentMismatchException;
+import kr.adapterz.springboot.exception.PostNotFoundException;
+import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
@@ -32,10 +36,10 @@ public class CommentService {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(UserNotFoundException::new);
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         Comment parent = findParentComment(request.getParentId(), postId);
 
@@ -52,7 +56,7 @@ public class CommentService {
     @Transactional(readOnly = true)
     public List<Comment> getComments(Long postId) {
         postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         return commentRepository.findByPostId(postId);
     }
@@ -60,7 +64,7 @@ public class CommentService {
     @Transactional(readOnly = true)
     public CommentListResponseDto getComments(Long postId, int page, int size) {
         postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(PostNotFoundException::new);
 
         List<Comment> comments = commentRepository.findByPostId(postId);
         int safePage = Math.max(page, 1);
@@ -79,7 +83,7 @@ public class CommentService {
     @Transactional
     public Comment updateComment(Long commentId, CommentRequestDto request) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(CommentNotFoundException::new);
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
@@ -95,7 +99,7 @@ public class CommentService {
     @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(CommentNotFoundException::new);
 
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
@@ -113,10 +117,10 @@ public class CommentService {
         }
 
         Comment parent = commentRepository.findById(parentId)
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+                .orElseThrow(CommentNotFoundException::new);
 
         if (!parent.getPost().getId().equals(postId)) {
-            throw new IllegalArgumentException("부모 댓글이 게시글에 속하지 않습니다.");
+            throw new ParentCommentMismatchException();
         }
 
         return parent;
