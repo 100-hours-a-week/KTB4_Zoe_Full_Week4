@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
+import kr.adapterz.springboot.dto.MultipartPostRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
@@ -54,9 +55,20 @@ public class PostService {
     private final PostViewRepository postViewRepository;
     private final PostDraftRepository postDraftRepository;
     private final HttpServletRequest request;
+    private final ImageStorageService imageStorageService;
 
     @Transactional
     public PostCreateResponseDto createPost(PostRequestDto request) {
+        return createPost(request.getTitle(), request.getContent(), request.getImageUrls());
+    }
+
+    @Transactional
+    public PostCreateResponseDto createPost(MultipartPostRequestDto request) {
+        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
+        return createPost(request.getTitle(), request.getContent(), imageUrls);
+    }
+
+    private PostCreateResponseDto createPost(String title, String content, List<String> imageUrls) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
@@ -65,11 +77,11 @@ public class PostService {
         validatePostRateLimit(currentUserId);
 
         Post post = new Post(
-                request.getTitle(),
-                request.getContent(),
+                title,
+                content,
                 author
         );
-        post.replaceImages(request.getImageUrls());
+        post.replaceImages(imageUrls);
 
         Post savedPost = postRepository.save(post);
 
@@ -119,6 +131,24 @@ public class PostService {
 
     @Transactional
     public PostUpdateResponseDto updatePost(Long postId, PostRequestDto request) {
+        return updatePost(postId, request.getTitle(), request.getContent(), request.getImageUrls(), true);
+    }
+
+    @Transactional
+    public PostUpdateResponseDto updatePost(Long postId, MultipartPostRequestDto request) {
+        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
+        boolean replaceImages = !imageUrls.isEmpty();
+
+        return updatePost(postId, request.getTitle(), request.getContent(), imageUrls, replaceImages);
+    }
+
+    private PostUpdateResponseDto updatePost(
+            Long postId,
+            String title,
+            String content,
+            List<String> imageUrls,
+            boolean replaceImages
+    ) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
 
@@ -136,9 +166,11 @@ public class PostService {
                 nextVersion
         ));
 
-        post.changeTitle(request.getTitle());
-        post.changeContent(request.getContent());
-        post.replaceImages(request.getImageUrls());
+        post.changeTitle(title);
+        post.changeContent(content);
+        if (replaceImages) {
+            post.replaceImages(imageUrls);
+        }
 
         return new PostUpdateResponseDto(postRepository.save(post));
     }

@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.service;
 
+import kr.adapterz.springboot.dto.MultipartUserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ImageStorageService imageStorageService;
 
     @Transactional(readOnly = true)
     public User getUser(Long userId) {
@@ -33,6 +35,23 @@ public class UserService {
 
         user.changeNickname(request.getNickname());
         user.changeProfileImage(request.getProfileImage());
+
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateUser(Long userId, MultipartUserUpdateRequestDto request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
+
+        validateActiveUser(user);
+
+        String profileImageUrl = imageStorageService.storeProfileImage(request.getProfileImage());
+
+        user.changeNickname(request.getNickname());
+        if (profileImageUrl != null) {
+            user.changeProfileImage(profileImageUrl);
+        }
 
         return userRepository.save(user);
     }

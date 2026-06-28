@@ -4,7 +4,7 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     nickname VARCHAR(30) NOT NULL UNIQUE,
-    profile_image VARCHAR(50),
+    profile_image VARCHAR(255),
     deleted_at TIMESTAMP
 );
 

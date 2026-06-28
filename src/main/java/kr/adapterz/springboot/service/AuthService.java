@@ -4,6 +4,7 @@ import kr.adapterz.springboot.auth.JwtTokenProvider;
 import kr.adapterz.springboot.auth.TokenPair;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.LoginRequestDto;
+import kr.adapterz.springboot.dto.MultipartSignupRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
 import kr.adapterz.springboot.dto.SignupRequestDto;
 import kr.adapterz.springboot.entity.User;
@@ -21,6 +22,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final CurrentUserProvider currentUserProvider;
+    private final ImageStorageService imageStorageService;
 
     public void signup(SignupRequestDto request) {
 
@@ -33,6 +35,23 @@ public class AuthService {
                 request.getPassword(),
                 request.getNickname(),
                 request.getProfileImage()
+        );
+
+        userRepository.save(user);
+    }
+
+    public void signup(MultipartSignupRequestDto request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmailException();
+        }
+
+        String profileImageUrl = imageStorageService.storeProfileImage(request.getProfileImage());
+        User user = User.of(
+                request.getEmail(),
+                request.getPassword(),
+                request.getNickname(),
+                profileImageUrl
         );
 
         userRepository.save(user);

@@ -5,6 +5,8 @@ import kr.adapterz.springboot.auth.UnauthorizedException;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -90,16 +92,29 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "parent_comment_mismatch");
     }
 
+    @ExceptionHandler(InvalidImageFileException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleInvalidImageFile(InvalidImageFileException e) {
+        return error(HttpStatus.BAD_REQUEST, "invalid_image_file");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        return error(HttpStatus.PAYLOAD_TOO_LARGE, "image_file_too_large");
+    }
+
+    @ExceptionHandler(ImageUploadFailedException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleImageUploadFailed(ImageUploadFailedException e) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "image_upload_failed");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponseDto<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
-        Map<String, String> errors = new LinkedHashMap<>();
+        return validationError(e);
+    }
 
-        e.getBindingResult().getFieldErrors()
-                .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ApiResponseDto<>("validation_failed", errors));
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiResponseDto<Map<String, String>>> handleBindException(BindException e) {
+        return validationError(e);
     }
 
     @ExceptionHandler(Exception.class)
@@ -111,5 +126,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(status)
                 .body(new ApiResponseDto<>(message, null));
+    }
+
+    private ResponseEntity<ApiResponseDto<Map<String, String>>> validationError(BindException e) {
+        Map<String, String> errors = new LinkedHashMap<>();
+
+        e.getBindingResult().getFieldErrors()
+                .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponseDto<>("validation_failed", errors));
     }
 }

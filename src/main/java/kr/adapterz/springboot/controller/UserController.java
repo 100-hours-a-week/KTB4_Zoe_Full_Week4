@@ -3,6 +3,7 @@ package kr.adapterz.springboot.controller;
 import jakarta.validation.Valid;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.dto.MultipartUserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserResponseDto;
 import kr.adapterz.springboot.dto.UserUpdateResponseDto;
@@ -10,6 +11,7 @@ import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,9 +34,22 @@ public class UserController {
                 .body(new ApiResponseDto<>("fetch_success", response));
     }
 
-    @PutMapping
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponseDto<UserUpdateResponseDto>> putUser(
             @Valid @RequestBody UserUpdateRequestDto request
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        User user = userService.updateUser(userId, request);
+        UserUpdateResponseDto response = new UserUpdateResponseDto(user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ApiResponseDto<>("user_updated", response));
+    }
+
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseDto<UserUpdateResponseDto>> putUserWithImage(
+            @Valid @ModelAttribute MultipartUserUpdateRequestDto request
     ) {
         Long userId = currentUserProvider.getCurrentUserId();
         User user = userService.updateUser(userId, request);

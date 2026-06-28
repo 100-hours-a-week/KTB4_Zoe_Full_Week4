@@ -29,7 +29,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 30)
     private  String nickname;
 
-    @Column(length = 50)
+    @Column(length = 255)
     private String profileImage;
 
     private LocalDateTime deletedAt;
