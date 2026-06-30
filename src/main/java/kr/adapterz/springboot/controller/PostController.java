@@ -39,8 +39,11 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponseDto<PostListResponseDto>> getPosts() {
-        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPosts()));
+    public ResponseEntity<ApiResponseDto<PostListResponseDto>> getPosts(
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPosts(cursor, size)));
     }
 
     @GetMapping("/{postId}")

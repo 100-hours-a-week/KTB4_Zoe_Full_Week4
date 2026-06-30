@@ -29,6 +29,7 @@ import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,7 @@ public class PostService {
 
     private static final long MAX_POSTS_PER_MINUTE = 3L;
     private static final long POST_LIMIT_WINDOW_MINUTES = 1L;
+    private static final int MAX_POST_PAGE_SIZE = 50;
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -89,16 +91,26 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostListResponseDto getPosts() {
-        List<Post> postEntities = postRepository.findAllByStatusNotWithAuthorAndImages(PostStatus.DELETED);
+    public PostListResponseDto getPosts(Long cursor, int size) {
+        int safeSize = normalizePageSize(size);
+        Long safeCursor = normalizeCursor(cursor);
 
-        if (postEntities.isEmpty()) {
-            return new PostListResponseDto(List.of());
+        List<Long> candidatePostIds = postRepository.findPostIdsByCursor(
+                PostStatus.DELETED,
+                safeCursor,
+                PageRequest.of(0, safeSize + 1)
+        );
+
+        boolean hasNext = candidatePostIds.size() > safeSize;
+        List<Long> postIds = candidatePostIds.stream()
+                .limit(safeSize)
+                .toList();
+
+        if (postIds.isEmpty()) {
+            return new PostListResponseDto(List.of(), null, false);
         }
 
-        List<Long> postIds = postEntities.stream()
-                .map(Post::getId)
-                .toList();
+        List<Post> postEntities = postRepository.findAllByIdInWithAuthorAndImages(postIds);
         Map<Long, Long> commentCounts = toCountMap(commentRepository.countByPostIdIn(postIds));
         Map<Long, Long> likeCounts = toCountMap(likeRepository.countByPostIdIn(postIds));
         Set<Long> editedPostIds = postVersionRepository.findEditedPostIds(postIds);
@@ -107,7 +119,9 @@ public class PostService {
                 .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds))
                 .toList();
 
-        return new PostListResponseDto(posts);
+        Long nextCursor = hasNext ? postIds.get(postIds.size() - 1) : null;
+
+        return new PostListResponseDto(posts, nextCursor, hasNext);
     }
 
     @Transactional
@@ -217,6 +231,18 @@ public class PostService {
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {
         return countProjections.stream()
                 .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCountValue));
+    }
+
+    private int normalizePageSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_POST_PAGE_SIZE);
+    }
+
+    private Long normalizeCursor(Long cursor) {
+        if (cursor == null || cursor <= 0) {
+            return null;
+        }
+
+        return cursor;
     }
 
     private void deletePostVolatileData(Long postId) {
