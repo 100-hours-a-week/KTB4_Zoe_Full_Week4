@@ -2,12 +2,14 @@ package kr.adapterz.springboot.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import kr.adapterz.springboot.auth.LoginResult;
 import kr.adapterz.springboot.auth.TokenPair;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.LoginRequestDto;
 import kr.adapterz.springboot.dto.MultipartSignupRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
 import kr.adapterz.springboot.dto.SignupRequestDto;
+import kr.adapterz.springboot.dto.UserResponseDto;
 import kr.adapterz.springboot.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -39,11 +41,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponseDto<Void>> login(
+    public ResponseEntity<ApiResponseDto<UserResponseDto>> login(
             @Valid @RequestBody LoginRequestDto request,
             HttpServletResponse response
     ) {
-        TokenPair tokens = authService.login(request);
+        LoginResult loginResult = authService.login(request);
+        TokenPair tokens = loginResult.tokens();
 
         ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", tokens.accessToken())
                 .httpOnly(true)
@@ -64,7 +67,7 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
 
-        return ResponseEntity.ok(new ApiResponseDto<>("login_success", null));
+        return ResponseEntity.ok(new ApiResponseDto<>("login_success", loginResult.user()));
     }
 
     //로그아웃시 쿠키 삭제

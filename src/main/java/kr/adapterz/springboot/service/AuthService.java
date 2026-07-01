@@ -1,12 +1,14 @@
 package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.JwtTokenProvider;
+import kr.adapterz.springboot.auth.LoginResult;
 import kr.adapterz.springboot.auth.TokenPair;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.LoginRequestDto;
 import kr.adapterz.springboot.dto.MultipartSignupRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
 import kr.adapterz.springboot.dto.SignupRequestDto;
+import kr.adapterz.springboot.dto.UserResponseDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
 import kr.adapterz.springboot.exception.DuplicateEmailException;
@@ -66,7 +68,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public TokenPair login(LoginRequestDto request) {
+    public LoginResult login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(InvalidLoginException::new);
 
@@ -76,8 +78,8 @@ public class AuthService {
 
         validateActiveUser(user);
 
-        return jwtTokenProvider.createTokenPair(user.getId()); //토큰 반환
-
+        TokenPair tokens = jwtTokenProvider.createTokenPair(user.getId());
+        return new LoginResult(tokens, new UserResponseDto(user));
     }
 
     public TokenPair reissue(String refreshToken) {
