@@ -10,6 +10,7 @@ import kr.adapterz.springboot.dto.SignupRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
 import kr.adapterz.springboot.exception.DuplicateEmailException;
+import kr.adapterz.springboot.exception.DuplicateNicknameException;
 import kr.adapterz.springboot.exception.InvalidLoginException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.UserRepository;
@@ -30,6 +31,10 @@ public class AuthService {
             throw new DuplicateEmailException();
         }
 
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new DuplicateNicknameException();
+        }
+
         User user = User.of(
                 request.getEmail(),
                 request.getPassword(),
@@ -44,6 +49,10 @@ public class AuthService {
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException();
+        }
+
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new DuplicateNicknameException();
         }
 
         String profileImageUrl = imageStorageService.storeProfileImage(request.getProfileImage());

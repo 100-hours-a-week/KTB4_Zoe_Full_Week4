@@ -82,6 +82,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, "email_already_exists");
     }
 
+    @ExceptionHandler(DuplicateNicknameException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDuplicateNickname(DuplicateNicknameException e) {
+        return error(HttpStatus.CONFLICT, "nickname_already_exists");
+    }
+
     @ExceptionHandler(InvalidLoginException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleInvalidLogin(InvalidLoginException e) {
         return error(HttpStatus.UNAUTHORIZED, "invalid_login");

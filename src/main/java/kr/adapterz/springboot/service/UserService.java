@@ -4,6 +4,7 @@ import kr.adapterz.springboot.dto.MultipartUserUpdateRequestDto;
 import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
+import kr.adapterz.springboot.exception.DuplicateNicknameException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
+        validateNicknameNotDuplicated(request.getNickname(), user.getId());
 
         user.changeNickname(request.getNickname());
         user.changeProfileImage(request.getProfileImage());
@@ -45,6 +47,7 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
 
         validateActiveUser(user);
+        validateNicknameNotDuplicated(request.getNickname(), user.getId());
 
         String profileImageUrl = imageStorageService.storeProfileImage(request.getProfileImage());
 
@@ -70,6 +73,12 @@ public class UserService {
     private void validateActiveUser(User user) {
         if (user.isDeleted()) {
             throw new DeletedUserException();
+        }
+    }
+
+    private void validateNicknameNotDuplicated(String nickname, Long userId) {
+        if (userRepository.existsByNicknameAndIdNot(nickname, userId)) {
+            throw new DuplicateNicknameException();
         }
     }
 }
