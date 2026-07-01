@@ -183,7 +183,7 @@ public class PostService {
         post.changeTitle(title);
         post.changeContent(content);
         if (replaceImages) {
-            post.replaceImages(imageUrls);
+            replaceImagesAfterDeletingExisting(post, imageUrls);
         }
 
         return new PostUpdateResponseDto(postRepository.save(post));
@@ -231,6 +231,12 @@ public class PostService {
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {
         return countProjections.stream()
                 .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCountValue));
+    }
+
+    private void replaceImagesAfterDeletingExisting(Post post, List<String> imageUrls) {
+        post.clearImages();
+        postRepository.flush();
+        post.addImages(imageUrls);
     }
 
     private int normalizePageSize(int size) {

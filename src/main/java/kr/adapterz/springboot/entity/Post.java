@@ -89,8 +89,15 @@ public class Post {
     }
 
     public void replaceImages(List<String> imageUrls) {
-        this.images.clear();
+        clearImages();
+        addImages(imageUrls);
+    }
 
+    public void clearImages() {
+        this.images.clear();
+    }
+
+    public void addImages(List<String> imageUrls) {
         List<String> safeImageUrls = imageUrls == null ? List.of() : imageUrls;
 
         for (int i = 0; i < safeImageUrls.size(); i++) {
