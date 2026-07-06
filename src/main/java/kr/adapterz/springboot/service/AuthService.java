@@ -21,6 +21,7 @@ import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.RefreshTokenRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final CurrentUserProvider currentUserProvider;
     private final ImageStorageService imageStorageService;
+    private final PasswordEncoder passwordEncoder;
 
     public void signup(SignupRequestDto request) {
 
@@ -48,7 +50,7 @@ public class AuthService {
 
         User user = User.of(
                 request.getEmail(),
-                request.getPassword(),
+                passwordEncoder.encode(request.getPassword()),
                 request.getNickname(),
                 request.getProfileImage()
         );
@@ -69,7 +71,7 @@ public class AuthService {
         String profileImageUrl = imageStorageService.storeProfileImage(request.getProfileImage());
         User user = User.of(
                 request.getEmail(),
-                request.getPassword(),
+                passwordEncoder.encode(request.getPassword()),
                 request.getNickname(),
                 profileImageUrl
         );
@@ -82,7 +84,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(InvalidLoginException::new);
 
-        if (!user.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidLoginException();
         }
 
@@ -146,7 +148,7 @@ public class AuthService {
 
         validateActiveUser(user);
 
-        user.changePassword(request.getPassword());
+        user.changePassword(passwordEncoder.encode(request.getPassword()));
 
         userRepository.save(user);
     }
