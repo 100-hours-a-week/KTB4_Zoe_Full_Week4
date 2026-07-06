@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.exception;
 
+import io.jsonwebtoken.JwtException;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
 import kr.adapterz.springboot.dto.ApiResponseDto;
@@ -20,6 +21,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleUnauthorized(UnauthorizedException e) {
         return error(HttpStatus.UNAUTHORIZED, "authentication_required");
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleJwtException(JwtException e) {
+        return error(HttpStatus.UNAUTHORIZED, "invalid_token");
     }
 
     @ExceptionHandler(ForbiddenException.class)
