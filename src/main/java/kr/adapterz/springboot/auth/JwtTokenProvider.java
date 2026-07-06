@@ -24,7 +24,6 @@ public class JwtTokenProvider {
     private final JwtProperties jwtProperties;
     private Key key;
 
-    //스프링 빈이 생성되고 의존성 주입이 끝난 뒤 초기화 로직을 실행할 때 사용하는 어노테이션
     @PostConstruct
     public void init() {
         this.key = Keys.hmacShaKeyFor(
@@ -32,21 +31,19 @@ public class JwtTokenProvider {
         );
     }
 
-    //토큰 생성
     private String createToken(String type, Long userId, Map<String, Object> claims, long expSeconds) {
         Instant now = Instant.now();
 
         return Jwts.builder()
+                .claims(claims)
                 .subject(String.valueOf(userId))
                 .claim("typ", type)
-                .claims(claims) //jwt 안에 담기는 사용자 정보와 토큰 속성 데이터
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(expSeconds)))
-                .signWith((SecretKey) key, Jwts.SIG.HS256) // 비밀키로 형변환
+                .signWith((SecretKey) key, Jwts.SIG.HS256)
                 .compact();
     }
 
-    //토큰쌍 생성
     public TokenPair createTokenPair(Long userId, String email, String nickname) {
         String accessToken = createToken("access", userId, Map.of("email", email, "nickname", nickname), jwtProperties.getAccessTokenExpSeconds());
         String refreshToken = createToken("refresh", userId, Map.of(), jwtProperties.getRefreshTokenExpSeconds());
@@ -54,7 +51,6 @@ public class JwtTokenProvider {
         return new TokenPair(accessToken, refreshToken);
     }
 
-    //토큰 파싱
     public Jws<Claims> parse(String token) {
         return Jwts.parser()
                 .verifyWith((SecretKey) key)
@@ -62,19 +58,25 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token);
     }
 
-    // 엑세스토큰 여부 확인 메서드
-    public boolean isAccessToken(String token) {
-        return "access".equals(parse(token).getPayload().get("typ", String.class));
+
+    public Claims getAccessTokenClaims(String token) {
+        Claims claims = parse(token).getPayload();
+
+        if (!"access".equals(claims.get("typ", String.class))) {
+            throw new JwtException("Not an access token");
+        }
+
+        return claims;
     }
 
-    // 토큰에서 유저아이디 꺼내오기
-    public Long getUserId(String token) {
-        return Long.valueOf(parse(token).getPayload().getSubject());
-    }
+    public Claims getRefreshTokenClaims(String token) {
+        Claims claims = parse(token).getPayload();
 
-    // 토큰 유효기간 단위 밀리초로 바꾸는 메서드
-    public Long getAccessTokenValidityInMilliseconds() {
-        return jwtProperties.getAccessTokenExpSeconds() * 1000;
+        if (!"refresh".equals(claims.get("typ", String.class))) {
+            throw new JwtException("Not a refresh token");
+        }
+
+        return claims;
     }
 
 }
