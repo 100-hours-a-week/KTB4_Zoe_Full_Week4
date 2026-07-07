@@ -58,10 +58,6 @@ public class Comment {
         this.content = content;
     }
 
-    public void assignId(Long id) {
-        this.id = id;
-    }
-
     public void deleteKeepingThread() {
         if (deletedAt != null) {
             return;

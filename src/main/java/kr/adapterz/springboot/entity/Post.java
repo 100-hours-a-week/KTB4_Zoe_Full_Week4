@@ -62,11 +62,6 @@ public class Post {
         this.content = content;
     }
 
-    //게시글 생성시 id 부여 메서드
-    public void assignId(Long id) {
-        this.id = id;
-    }
-
     public void increaseViewCount() {
         this.viewCount++;
     }

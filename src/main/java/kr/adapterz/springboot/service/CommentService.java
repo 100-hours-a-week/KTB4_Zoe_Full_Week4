@@ -55,14 +55,6 @@ public class CommentService {
     }
 
     @Transactional(readOnly = true)
-    public List<Comment> getComments(Long postId) {
-        postRepository.findById(postId)
-                .orElseThrow(PostNotFoundException::new);
-
-        return commentRepository.findByPostId(postId);
-    }
-
-    @Transactional(readOnly = true)
     public CommentListResponseDto getComments(Long postId, int page, int size) {
         postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
