@@ -1,6 +1,5 @@
 package kr.adapterz.springboot.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
@@ -38,7 +37,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,7 +57,6 @@ public class PostService {
     private final PostVersionRepository postVersionRepository;
     private final PostViewRepository postViewRepository;
     private final PostDraftRepository postDraftRepository;
-    private final HttpServletRequest request;
     private final ImageStorageService imageStorageService;
 
     @Transactional
@@ -129,7 +126,7 @@ public class PostService {
     }
 
     @Transactional
-    public PostDetailResponseDto getPost(Long postId) {
+    public PostDetailResponseDto getPost(Long postId, String guestViewerKey) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
 
@@ -142,7 +139,7 @@ public class PostService {
         }
 
         Long currentUserId = getCurrentUserIdOrNull();
-        increaseViewCountIfAllowed(post, currentUserId);
+        increaseViewCountIfAllowed(post, currentUserId, guestViewerKey);
 
         return toDetailResponse(post, currentUserId);
     }
@@ -296,10 +293,10 @@ public class PostService {
         }
     }
 
-    private void increaseViewCountIfAllowed(Post post, Long currentUserId) {
+    private void increaseViewCountIfAllowed(Post post, Long currentUserId, String guestViewerKey) {
         LocalDateTime now = LocalDateTime.now();
         User viewer = findViewer(currentUserId);
-        String viewerKey = createViewerKey(currentUserId);
+        String viewerKey = createViewerKey(currentUserId, guestViewerKey);
 
         PostView postView = postViewRepository.findByPostIdAndViewerKey(post.getId(), viewerKey)
                 .orElse(null);
@@ -326,21 +323,11 @@ public class PostService {
                 .orElse(null);
     }
 
-    private String createViewerKey(Long currentUserId) {
+    private String createViewerKey(Long currentUserId, String guestViewerKey) {
         if (currentUserId != null) {
             return "USER:" + currentUserId;
         }
 
-        String userAgent = Objects.toString(request.getHeader("User-Agent"), "");
-        return "GUEST:" + getClientIp() + ":" + Integer.toHexString(userAgent.hashCode());
-    }
-
-    private String getClientIp() {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-
-        return request.getRemoteAddr();
+        return guestViewerKey;
     }
 }

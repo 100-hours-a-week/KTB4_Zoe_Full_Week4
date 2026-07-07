@@ -1,5 +1,6 @@
 package kr.adapterz.springboot.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.MultipartPostRequestDto;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
 
     private final PostService postService;
+    private final ViewerKeyResolver viewerKeyResolver;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPost(@Valid @RequestBody PostRequestDto request) {
@@ -47,8 +49,12 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<PostDetailResponseDto>> getPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPost(postId)));
+    public ResponseEntity<ApiResponseDto<PostDetailResponseDto>> getPost(
+            @PathVariable Long postId,
+            HttpServletRequest request
+    ) {
+        String guestViewerKey = viewerKeyResolver.createGuestViewerKey(request);
+        return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPost(postId, guestViewerKey)));
     }
 
     @PutMapping(value = "/{postId}", consumes = MediaType.APPLICATION_JSON_VALUE)
