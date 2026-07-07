@@ -10,6 +10,7 @@ import kr.adapterz.springboot.entity.Comment;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.CommentNotFoundException;
+import kr.adapterz.springboot.exception.DeletedCommentException;
 import kr.adapterz.springboot.exception.ParentCommentMismatchException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
@@ -89,6 +90,10 @@ public class CommentService {
 
         if (!comment.getAuthor().getId().equals(currentUserId)) {
             throw new ForbiddenException("댓글 수정 권한이 없습니다.");
+        }
+
+        if (comment.isDeleted()) {
+            throw new DeletedCommentException();
         }
 
         comment.changeContent(request.getContent());

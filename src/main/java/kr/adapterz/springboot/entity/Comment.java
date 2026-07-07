@@ -71,4 +71,8 @@ public class Comment {
         this.status = CommentStatus.DELETED;
         this.deletedAt = LocalDateTime.now();
     }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
 }

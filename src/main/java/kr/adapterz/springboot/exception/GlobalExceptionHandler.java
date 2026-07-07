@@ -38,6 +38,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.FORBIDDEN, "user_deleted");
     }
 
+    @ExceptionHandler(DeletedCommentException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleDeletedComment(DeletedCommentException e) {
+        return error(HttpStatus.CONFLICT, "comment_deleted");
+    }
+
     @ExceptionHandler(PostRateLimitExceededException.class)
     public ResponseEntity<ApiResponseDto<Void>> handlePostRateLimit(PostRateLimitExceededException e) {
         return error(HttpStatus.TOO_MANY_REQUESTS, "post_rate_limited");
