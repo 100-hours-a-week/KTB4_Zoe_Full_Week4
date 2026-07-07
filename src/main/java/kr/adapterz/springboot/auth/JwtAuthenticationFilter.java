@@ -31,6 +31,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             PermitPath.post("/auth/login"),
             PermitPath.post("/auth/logout"),
             PermitPath.post("/auth/reissue"),
+            PermitPath.get("/csrf"),
+            PermitPath.get("/posts"),
+            PermitPath.get("/posts/{postId}"),
+            PermitPath.get("/comments/posts/{postId}"),
+            PermitPath.get("/uploads/**"),
             PermitPath.options("/**")
     );
     @Override
