@@ -30,6 +30,7 @@ import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -79,7 +80,6 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    @Transactional
     public LoginResult login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(InvalidLoginException::new);
@@ -96,7 +96,6 @@ public class AuthService {
         return new LoginResult(tokens, new UserResponseDto(user));
     }
 
-    @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             return;
@@ -106,7 +105,6 @@ public class AuthService {
                 .ifPresent(refreshTokenRepository::delete);
     }
 
-    @Transactional
     public TokenPair reissue(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new UnauthorizedException();
@@ -149,8 +147,6 @@ public class AuthService {
         validateActiveUser(user);
 
         user.changePassword(passwordEncoder.encode(request.getPassword()));
-
-        userRepository.save(user);
     }
 
     private void validateActiveUser(User user) {
