@@ -28,12 +28,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     );
 
     @Query("""
-            select distinct p
+            select p
             from Post p
             join fetch p.author
-            left join fetch p.images
             where p.id in :postIds
             order by p.id desc
             """)
-    List<Post> findAllByIdInWithAuthorAndImages(@Param("postIds") List<Long> postIds);
+    List<Post> findAllByIdInWithAuthor(@Param("postIds") List<Long> postIds);
 }

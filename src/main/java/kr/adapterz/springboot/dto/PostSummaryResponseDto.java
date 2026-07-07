@@ -39,9 +39,13 @@ public class PostSummaryResponseDto {
     private WriterResponseDto writer;
 
     public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited) {
+        this(post, likeCount, commentCount, edited, post.getThumbnailUrl());
+    }
+
+    public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited, String thumbnailUrl) {
         this.postId = post.getId();
         this.title = post.isBlinded() ? BLINDED_POST_TITLE : post.getTitle();
-        this.thumbnailUrl = post.isBlinded() ? null : post.getThumbnailUrl();
+        this.thumbnailUrl = post.isBlinded() ? null : thumbnailUrl;
         this.createdAt = post.getCreatedAt();
         this.likeCount = likeCount;
         this.commentCount = commentCount;

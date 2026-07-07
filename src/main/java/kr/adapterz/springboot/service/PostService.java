@@ -24,7 +24,9 @@ import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
 import kr.adapterz.springboot.repository.PostCountProjection;
 import kr.adapterz.springboot.repository.PostDraftRepository;
+import kr.adapterz.springboot.repository.PostImageRepository;
 import kr.adapterz.springboot.repository.PostRepository;
+import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
@@ -53,6 +55,7 @@ public class PostService {
     private final CurrentUserProvider currentUserProvider;
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
+    private final PostImageRepository postImageRepository;
     private final PostVersionRepository postVersionRepository;
     private final PostViewRepository postViewRepository;
     private final PostDraftRepository postDraftRepository;
@@ -110,13 +113,14 @@ public class PostService {
             return new PostListResponseDto(List.of(), null, false);
         }
 
-        List<Post> postEntities = postRepository.findAllByIdInWithAuthorAndImages(postIds);
+        List<Post> postEntities = postRepository.findAllByIdInWithAuthor(postIds);
         Map<Long, Long> commentCounts = toCountMap(commentRepository.countByPostIdIn(postIds));
         Map<Long, Long> likeCounts = toCountMap(likeRepository.countByPostIdIn(postIds));
+        Map<Long, String> thumbnailUrls = toThumbnailMap(postImageRepository.findThumbnailsByPostIdIn(postIds));
         Set<Long> editedPostIds = postVersionRepository.findEditedPostIds(postIds);
 
         List<PostSummaryResponseDto> posts = postEntities.stream()
-                .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds))
+                .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds, thumbnailUrls))
                 .toList();
 
         Long nextCursor = hasNext ? postIds.get(postIds.size() - 1) : null;
@@ -227,18 +231,24 @@ public class PostService {
             Post post,
             Map<Long, Long> likeCounts,
             Map<Long, Long> commentCounts,
-            Set<Long> editedPostIds
+            Set<Long> editedPostIds,
+            Map<Long, String> thumbnailUrls
     ) {
         long commentCount = commentCounts.getOrDefault(post.getId(), 0L);
         long likeCount = likeCounts.getOrDefault(post.getId(), 0L);
         boolean edited = editedPostIds.contains(post.getId());
 
-        return new PostSummaryResponseDto(post, likeCount, commentCount, edited);
+        return new PostSummaryResponseDto(post, likeCount, commentCount, edited, thumbnailUrls.get(post.getId()));
     }
 
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {
         return countProjections.stream()
                 .collect(Collectors.toMap(PostCountProjection::getPostId, PostCountProjection::getCountValue));
+    }
+
+    private Map<Long, String> toThumbnailMap(List<PostThumbnailProjection> thumbnailProjections) {
+        return thumbnailProjections.stream()
+                .collect(Collectors.toMap(PostThumbnailProjection::getPostId, PostThumbnailProjection::getImageUrl));
     }
 
     private void replaceImagesAfterDeletingExisting(Post post, List<String> imageUrls) {
