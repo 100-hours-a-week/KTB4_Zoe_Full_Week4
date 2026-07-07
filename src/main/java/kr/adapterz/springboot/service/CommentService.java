@@ -12,6 +12,7 @@ import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.CommentNotFoundException;
 import kr.adapterz.springboot.exception.DeletedCommentException;
 import kr.adapterz.springboot.exception.ParentCommentMismatchException;
+import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
@@ -41,6 +42,7 @@ public class CommentService {
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+        validateInteractablePost(post);
 
         Comment parent = findParentComment(request.getParentId(), postId);
 
@@ -56,8 +58,9 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public CommentListResponseDto getComments(Long postId, int page, int size) {
-        postRepository.findById(postId)
+        Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+        validateInteractablePost(post);
 
         List<Comment> comments = commentRepository.findByPostId(postId);
         int safePage = Math.max(page, 1);
@@ -88,6 +91,8 @@ public class CommentService {
             throw new DeletedCommentException();
         }
 
+        validateInteractablePost(comment.getPost());
+
         comment.changeContent(request.getContent());
 
         return commentRepository.save(comment);
@@ -103,6 +108,8 @@ public class CommentService {
         if (!comment.getAuthor().getId().equals(currentUserId)) {
             throw new ForbiddenException("댓글 삭제 권한이 없습니다.");
         }
+
+        validateInteractablePost(comment.getPost());
 
         comment.deleteKeepingThread();
         commentRepository.save(comment);
@@ -121,5 +128,15 @@ public class CommentService {
         }
 
         return parent;
+    }
+
+    private void validateInteractablePost(Post post) {
+        if (post.isDeleted()) {
+            throw new PostNotFoundException();
+        }
+
+        if (post.isBlinded()) {
+            throw new PostBlindedException();
+        }
     }
 }

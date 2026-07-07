@@ -171,6 +171,14 @@ public class PostService {
             throw new ForbiddenException("게시글 수정 권한이 없습니다.");
         }
 
+        if (post.isDeleted()) {
+            throw new PostNotFoundException();
+        }
+
+        if (post.isBlinded()) {
+            throw new PostBlindedException();
+        }
+
         int nextVersion = postVersionRepository.findLastVersionNumber(post.getId()) + 1;
         postVersionRepository.save(new PostVersion(
                 post,

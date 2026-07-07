@@ -42,6 +42,10 @@ public class PostReportService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
 
+        if (post.isDeleted()) {
+            throw new PostNotFoundException();
+        }
+
         if (post.isBlinded()) {
             throw new PostBlindedException();
         }

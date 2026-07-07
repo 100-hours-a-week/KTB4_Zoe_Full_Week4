@@ -6,6 +6,7 @@ import kr.adapterz.springboot.entity.Like;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DuplicatePostLikeException;
+import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostLikeNotFoundException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
@@ -31,6 +32,7 @@ public class LikeService {
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+        validateInteractablePost(post);
 
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(UserNotFoundException::new);
@@ -50,8 +52,9 @@ public class LikeService {
     public LikeResponseDto unlikePost(Long postId) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
-        postRepository.findById(postId)
+        Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+        validateInteractablePost(post);
 
         long deletedCount = likeRepository.deleteByPostIdAndUserId(postId, currentUserId);
 
@@ -68,12 +71,23 @@ public class LikeService {
     public LikeResponseDto getPostLike(Long postId) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
-        postRepository.findById(postId)
+        Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
+        validateInteractablePost(post);
 
         long likeCount = likeRepository.countByPostId(postId);
         boolean liked = likeRepository.existsByPostIdAndUserId(postId, currentUserId);
 
         return new LikeResponseDto(postId, likeCount, liked);
+    }
+
+    private void validateInteractablePost(Post post) {
+        if (post.isDeleted()) {
+            throw new PostNotFoundException();
+        }
+
+        if (post.isBlinded()) {
+            throw new PostBlindedException();
+        }
     }
 }
