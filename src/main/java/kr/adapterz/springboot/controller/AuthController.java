@@ -52,7 +52,6 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponseDto<>("login_success", loginResult.user()));
     }
 
-    //로그아웃시 쿠키 삭제
     @PostMapping("/logout")
     public ResponseEntity<ApiResponseDto<Void>> logout(
             @CookieValue(name = "refreshToken", required = false) String refreshToken,
