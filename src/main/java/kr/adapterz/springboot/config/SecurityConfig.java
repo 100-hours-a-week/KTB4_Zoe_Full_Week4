@@ -1,6 +1,8 @@
 package kr.adapterz.springboot.config;
 
 import kr.adapterz.springboot.auth.JwtAuthenticationFilter;
+import kr.adapterz.springboot.auth.SecurityAccessDeniedHandler;
+import kr.adapterz.springboot.auth.SecurityAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +25,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    private final SecurityAuthenticationEntryPoint authenticationEntryPoint;
+    private final SecurityAccessDeniedHandler accessDeniedHandler;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -35,6 +40,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
