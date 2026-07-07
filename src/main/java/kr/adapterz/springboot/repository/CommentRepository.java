@@ -1,6 +1,8 @@
 package kr.adapterz.springboot.repository;
 
 import kr.adapterz.springboot.entity.Comment;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,7 +13,7 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     @EntityGraph(attributePaths = "author")
-    List<Comment> findByPostId(Long postId);
+    Slice<Comment> findByPostIdOrderByIdAsc(Long postId, Pageable pageable);
 
     long countByPostId(Long postId);
 

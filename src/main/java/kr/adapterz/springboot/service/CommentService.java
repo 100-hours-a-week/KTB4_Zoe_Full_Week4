@@ -19,6 +19,8 @@ import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CommentService {
+
+    private static final int MAX_COMMENT_PAGE_SIZE = 50;
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
@@ -62,18 +66,18 @@ public class CommentService {
                 .orElseThrow(PostNotFoundException::new);
         validateInteractablePost(post);
 
-        List<Comment> comments = commentRepository.findByPostId(postId);
         int safePage = Math.max(page, 1);
-        int safeSize = Math.max(size, 1);
-        int startIndex = Math.min((safePage - 1) * safeSize, comments.size());
-        int endIndex = Math.min(startIndex + safeSize, comments.size());
-        boolean hasNext = endIndex < comments.size();
+        int safeSize = normalizePageSize(size);
+        Slice<Comment> comments = commentRepository.findByPostIdOrderByIdAsc(
+                postId,
+                PageRequest.of(safePage - 1, safeSize)
+        );
 
-        List<CommentResponseDto> response = comments.subList(startIndex, endIndex).stream()
+        List<CommentResponseDto> response = comments.getContent().stream()
                 .map(CommentResponseDto::new)
                 .toList();
 
-        return new CommentListResponseDto(response, new PaginationResponseDto(safePage, safeSize, hasNext));
+        return new CommentListResponseDto(response, new PaginationResponseDto(safePage, safeSize, comments.hasNext()));
     }
 
     @Transactional
@@ -138,5 +142,9 @@ public class CommentService {
         if (post.isBlinded()) {
             throw new PostBlindedException();
         }
+    }
+
+    private int normalizePageSize(int size) {
+        return Math.min(Math.max(size, 1), MAX_COMMENT_PAGE_SIZE);
     }
 }
