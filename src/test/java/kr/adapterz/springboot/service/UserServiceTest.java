@@ -1,7 +1,6 @@
 package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.dto.MultipartUserUpdateRequestDto;
-import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
 import kr.adapterz.springboot.exception.DuplicateNicknameException;
@@ -115,12 +114,20 @@ public class UserServiceTest {
         );
 
         ReflectionTestUtils.setField(user, "id", userId);
-        UserUpdateRequestDto request = new UserUpdateRequestDto();
-        ReflectionTestUtils.setField(request, "nickname", "newNick");
-        ReflectionTestUtils.setField(request, "profileImage", "new.png");
+        MockMultipartFile profileImage = new MockMultipartFile(
+                "profile_image",
+                "profile.png",
+                "image/png",
+                "image".getBytes()
+        );
+
+        MultipartUserUpdateRequestDto request = new MultipartUserUpdateRequestDto();
+        request.setNickname("newNick");
+        request.setProfileImage(profileImage);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(userRepository.existsByNicknameAndIdNot("newNick", userId)).willReturn(false);
+        given(imageStorageService.storeProfileImage(profileImage)).willReturn("/uploads/profile-images/stored.png");
         given(userRepository.save(user)).willReturn(user);
 
         // when
@@ -128,10 +135,11 @@ public class UserServiceTest {
 
         // then
         assertThat(updatedUser.getNickname()).isEqualTo("newNick");
-        assertThat(updatedUser.getProfileImage()).isEqualTo("new.png");
+        assertThat(updatedUser.getProfileImage()).isEqualTo("/uploads/profile-images/stored.png");
 
         then(userRepository).should().findById(userId);
         then(userRepository).should().existsByNicknameAndIdNot("newNick", userId);
+        then(imageStorageService).should().storeProfileImage(profileImage);
         then(userRepository).should().save(user);
     }
 
@@ -148,9 +156,17 @@ public class UserServiceTest {
         );
 
         ReflectionTestUtils.setField(user, "id", userId);
-        UserUpdateRequestDto request = new UserUpdateRequestDto();
+
+        MockMultipartFile profileImage = new MockMultipartFile(
+                "profile_image",
+                "profile.png",
+                "image/png",
+                "image".getBytes()
+        );
+
+        MultipartUserUpdateRequestDto request = new MultipartUserUpdateRequestDto();
         ReflectionTestUtils.setField(request, "nickname", "duplicateNick");
-        ReflectionTestUtils.setField(request, "profileImage", "new.png");
+        ReflectionTestUtils.setField(request, "profileImage", profileImage);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(userRepository.existsByNicknameAndIdNot("duplicateNick", userId)).willReturn(true);
@@ -169,9 +185,17 @@ public class UserServiceTest {
     void updateUserFailByNotFound() {
         // given
         Long userId = 1L;
-        UserUpdateRequestDto request = new UserUpdateRequestDto();
+
+        MockMultipartFile profileImage = new MockMultipartFile(
+                "profile_image",
+                "profile.png",
+                "image/png",
+                "image".getBytes()
+        );
+
+        MultipartUserUpdateRequestDto request = new MultipartUserUpdateRequestDto();
         ReflectionTestUtils.setField(request, "nickname", "newNick");
-        ReflectionTestUtils.setField(request, "profileImage", "new.png");
+        ReflectionTestUtils.setField(request, "profileImage", profileImage);
 
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -198,9 +222,16 @@ public class UserServiceTest {
         ReflectionTestUtils.setField(user, "id", userId);
         user.delete();
 
-        UserUpdateRequestDto request = new UserUpdateRequestDto();
+        MockMultipartFile profileImage = new MockMultipartFile(
+                "profile_image",
+                "profile.png",
+                "image/png",
+                "image".getBytes()
+        );
+
+        MultipartUserUpdateRequestDto request = new MultipartUserUpdateRequestDto();
         ReflectionTestUtils.setField(request, "nickname", "newNick");
-        ReflectionTestUtils.setField(request, "profileImage", "new.png");
+        ReflectionTestUtils.setField(request, "profileImage", profileImage);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
