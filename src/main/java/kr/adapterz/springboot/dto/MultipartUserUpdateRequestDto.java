@@ -19,8 +19,4 @@ public class MultipartUserUpdateRequestDto {
     private String nickname;
 
     private MultipartFile profileImage;
-
-    public void setProfile_image(MultipartFile profileImage) {
-        this.profileImage = profileImage;
-    }
 }
