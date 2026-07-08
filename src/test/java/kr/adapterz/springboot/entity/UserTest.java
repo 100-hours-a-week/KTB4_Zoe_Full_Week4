@@ -46,4 +46,64 @@ public class UserTest {
         assertThat(user.getDeletedAt()).isNotNull();
         assertThat(user.isDeleted()).isTrue();
     }
+
+    @Test
+    @DisplayName("닉네임 수정을 하면 수정한 닉네임으로 저장된다")
+    void changeNickname() {
+        //given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+
+        String newNickname = "newNick";
+
+        //when
+        user.changeNickname(newNickname);
+
+        //then
+        assertThat(user.getNickname()).isEqualTo(newNickname);
+    }
+
+    @Test
+    @DisplayName("프로필 이미지를 수정하면 수정한 프로필 이미지로 저장된다")
+    void chageProfileImage() {
+        //given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+
+        String newProfile = "new.png";
+
+        //when
+        user.changeProfileImage(newProfile);
+
+        //then
+        assertThat(user.getProfileImage()).isEqualTo(newProfile);
+    }
+
+    @Test
+    @DisplayName("비밀번호를 수정하면 수정한 비밀번호로 저장된다")
+    void changePassword() {
+        //given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+
+        String newPassword = "newEncodedPassword";
+
+        //when
+        user.changePassword(newPassword);
+
+        //then
+        assertThat(user.getPassword()).isEqualTo(newPassword);
+    }
 }
