@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -15,6 +17,65 @@ class UserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Test
+    @DisplayName("이메일로 회원을 조회할 수 있다")
+    void findByEmail() {
+        // given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+        userRepository.saveAndFlush(user);
+
+        // when
+        Optional<User> foundUser = userRepository.findByEmail("test@example.com");
+
+        // then
+        assertThat(foundUser).isPresent();
+        assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
+        assertThat(foundUser.get().getNickname()).isEqualTo("tester");
+    }
+
+    @Test
+    @DisplayName("존재하는 이메일이면 true를 반환한다")
+    void existsByEmail() {
+        // given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+        userRepository.saveAndFlush(user);
+
+        // when
+        boolean exists = userRepository.existsByEmail("test@example.com");
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("존재하는 닉네임이면 true를 반환한다")
+    void existsByNickname() {
+        // given
+        User user = User.of(
+                "test@example.com",
+                "encodedPassword",
+                "tester",
+                "profile.png"
+        );
+        userRepository.saveAndFlush(user);
+
+        // when
+        boolean exists = userRepository.existsByNickname("tester");
+
+        // then
+        assertThat(exists).isTrue();
+    }
 
     @Test
     @DisplayName("자기 자신의 닉네임은 중복으로 판단하지 않는다")
