@@ -7,7 +7,6 @@ import kr.adapterz.springboot.dto.MultipartPostRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
-import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +22,6 @@ public class PostController {
 
     private final PostService postService;
     private final ViewerKeyResolver viewerKeyResolver;
-
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPost(@Valid @RequestBody PostRequestDto request) {
-        PostCreateResponseDto response = postService.createPost(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponseDto<>("post_created", response));
-    }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPostWithImages(
@@ -55,15 +47,6 @@ public class PostController {
     ) {
         String guestViewerKey = viewerKeyResolver.createGuestViewerKey(request);
         return ResponseEntity.ok(new ApiResponseDto<>("fetch_success", postService.getPost(postId, guestViewerKey)));
-    }
-
-    @PutMapping(value = "/{postId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponseDto<PostUpdateResponseDto>> updatePost(
-            @PathVariable Long postId,
-            @Valid @RequestBody PostRequestDto request
-    ) {
-        PostUpdateResponseDto response = postService.updatePost(postId, request);
-        return ResponseEntity.ok(new ApiResponseDto<>("post_updated", response));
     }
 
     @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

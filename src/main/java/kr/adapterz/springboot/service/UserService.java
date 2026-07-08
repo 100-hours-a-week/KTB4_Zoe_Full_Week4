@@ -1,7 +1,6 @@
 package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.dto.MultipartUserUpdateRequestDto;
-import kr.adapterz.springboot.dto.UserUpdateRequestDto;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.DeletedUserException;
 import kr.adapterz.springboot.exception.DuplicateNicknameException;
@@ -25,20 +24,6 @@ public class UserService {
 
         validateActiveUser(user);
         return user;
-    }
-
-    @Transactional
-    public User updateUser(Long userId, UserUpdateRequestDto request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(UserNotFoundException::new);
-
-        validateActiveUser(user);
-        validateNicknameNotDuplicated(request.getNickname(), user.getId());
-
-        user.changeNickname(request.getNickname());
-        user.changeProfileImage(request.getProfileImage());
-
-        return userRepository.save(user);
     }
 
     @Transactional

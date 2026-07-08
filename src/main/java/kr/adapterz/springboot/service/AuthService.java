@@ -9,7 +9,6 @@ import kr.adapterz.springboot.auth.UnauthorizedException;
 import kr.adapterz.springboot.dto.LoginRequestDto;
 import kr.adapterz.springboot.dto.MultipartSignupRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
-import kr.adapterz.springboot.dto.SignupRequestDto;
 import kr.adapterz.springboot.dto.UserResponseDto;
 import kr.adapterz.springboot.entity.RefreshToken;
 import kr.adapterz.springboot.entity.User;
@@ -38,26 +37,6 @@ public class AuthService {
     private final CurrentUserProvider currentUserProvider;
     private final ImageStorageService imageStorageService;
     private final PasswordEncoder passwordEncoder;
-
-    public void signup(SignupRequestDto request) {
-
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException();
-        }
-
-        if (userRepository.existsByNickname(request.getNickname())) {
-            throw new DuplicateNicknameException();
-        }
-
-        User user = User.of(
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword()),
-                request.getNickname(),
-                request.getProfileImage()
-        );
-
-        userRepository.save(user);
-    }
 
     public void signup(MultipartSignupRequestDto request) {
 

@@ -7,7 +7,6 @@ import kr.adapterz.springboot.dto.MultipartPostRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
-import kr.adapterz.springboot.dto.PostRequestDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
@@ -58,11 +57,6 @@ public class PostService {
     private final PostViewRepository postViewRepository;
     private final PostDraftRepository postDraftRepository;
     private final ImageStorageService imageStorageService;
-
-    @Transactional
-    public PostCreateResponseDto createPost(PostRequestDto request) {
-        return createPost(request.getTitle(), request.getContent(), request.getImageUrls());
-    }
 
     @Transactional
     public PostCreateResponseDto createPost(MultipartPostRequestDto request) {
@@ -142,11 +136,6 @@ public class PostService {
         increaseViewCountIfAllowed(post, currentUserId, guestViewerKey);
 
         return toDetailResponse(post, currentUserId);
-    }
-
-    @Transactional
-    public PostUpdateResponseDto updatePost(Long postId, PostRequestDto request) {
-        return updatePost(postId, request.getTitle(), request.getContent(), request.getImageUrls(), true);
     }
 
     @Transactional

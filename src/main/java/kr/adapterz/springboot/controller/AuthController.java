@@ -9,7 +9,6 @@ import kr.adapterz.springboot.dto.ApiResponseDto;
 import kr.adapterz.springboot.dto.LoginRequestDto;
 import kr.adapterz.springboot.dto.MultipartSignupRequestDto;
 import kr.adapterz.springboot.dto.PasswordChangeRequestDto;
-import kr.adapterz.springboot.dto.SignupRequestDto;
 import kr.adapterz.springboot.dto.UserResponseDto;
 import kr.adapterz.springboot.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +24,6 @@ public class AuthController {
 
     private final AuthService authService;
     private final TokenCookieManager tokenCookieManager;
-
-    @PostMapping(value = "/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponseDto<Void>> signup(@Valid @RequestBody SignupRequestDto request) {
-        authService.signup(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponseDto<>("user_created", null));
-    }
 
     @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseDto<Void>> signupWithImage(@Valid @ModelAttribute MultipartSignupRequestDto request) {
