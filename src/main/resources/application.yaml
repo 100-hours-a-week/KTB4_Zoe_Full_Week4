@@ -3,14 +3,10 @@ spring:
     name: kr.adapterz
 
   datasource:
-    url: jdbc:h2:mem:adapterz;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-
-  h2:
-    console:
-      enabled: true
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   servlet:
     multipart:
@@ -19,7 +15,10 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never
+
+  flyway:
+    enabled: true
 
   jpa:
     open-in-view: false
@@ -28,9 +27,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-
-  profiles:
-    active: devolopment
 
 logging:
   level:
@@ -47,3 +43,12 @@ app:
     profile-image-dir: uploads/profile-images
     post-image-url-prefix: /uploads/post-images
     profile-image-url-prefix: /uploads/profile-images
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/comments/posts/{postId}").permitAll()
 
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
 
                         .requestMatchers(
                                 "/auth/password",
