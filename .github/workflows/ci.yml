@@ -101,3 +101,51 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Dispatch backend deployment
+        env:
+          DEPLOY_DISPATCH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+          IMAGE_SHA: ${{ github.sha }}
+          EVENT_TYPE: backend_image_published
+          COMPONENT: backend
+          SOURCE_REPOSITORY: 100-hours-a-week/KTB4_Zoe_Full_Week4
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DEPLOY_DISPATCH_TOKEN:-}" ]]; then
+            echo "::error::DEPLOY_DISPATCH_TOKEN is empty"
+            exit 1
+          fi
+
+          if [[ ! "$IMAGE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::IMAGE_SHA must be a lowercase 40-character Git SHA"
+            exit 1
+          fi
+
+          payload="$(
+            jq -n \
+              --arg event_type "$EVENT_TYPE" \
+              --arg component "$COMPONENT" \
+              --arg image_sha "$IMAGE_SHA" \
+              --arg source_repository "$SOURCE_REPOSITORY" \
+              '{
+                event_type: $event_type,
+                client_payload: {
+                  component: $component,
+                  image_sha: $image_sha,
+                  source_repository: $source_repository
+                }
+              }'
+          )"
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${DEPLOY_DISPATCH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2026-03-10" \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/100-hours-a-week/KTB4_Zoe_Full_Deploy/dispatches"
