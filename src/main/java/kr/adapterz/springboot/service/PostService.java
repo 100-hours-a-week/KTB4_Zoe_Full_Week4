@@ -8,6 +8,7 @@ import kr.adapterz.springboot.dto.MultipartPostUpdateRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
+import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Post;
@@ -15,6 +16,8 @@ import kr.adapterz.springboot.entity.PostStatus;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
 import kr.adapterz.springboot.entity.Poll;
+import kr.adapterz.springboot.entity.PollVote;
+import kr.adapterz.springboot.entity.PollVoteId;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
@@ -30,6 +33,7 @@ import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.PollRepository;
+import kr.adapterz.springboot.repository.PollVoteRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -52,6 +56,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final PollRepository pollRepository;
+    private final PollVoteRepository pollVoteRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final CommentRepository commentRepository;
@@ -219,8 +224,39 @@ public class PostService {
         boolean liked = currentUserId != null
                 && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
         boolean edited = postVersionRepository.existsByPostId(post.getId());
+        PollResponseDto poll = createPollResponse(post.getId(), currentUserId);
 
-        return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited);
+        return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited, poll);
+    }
+
+    private PollResponseDto createPollResponse(Long postId, Long currentUserId) {
+        Poll poll = pollRepository.findByPostIdWithOptions(postId)
+                .orElse(null);
+
+        if (poll == null) {
+            return null;
+        }
+
+        long totalVoteCount = pollVoteRepository.countByIdPollId(poll.getPostId());
+        if (currentUserId == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        PollVote currentVote = pollVoteRepository.findById(
+                        new PollVoteId(poll.getPostId(), currentUserId)
+                )
+                .orElse(null);
+
+        if (currentVote == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        return PollResponseDto.withResult(
+                poll,
+                totalVoteCount,
+                currentVote,
+                pollVoteRepository.countVotesByOption(poll.getPostId())
+        );
     }
 
     private PostSummaryResponseDto toSummaryResponse(

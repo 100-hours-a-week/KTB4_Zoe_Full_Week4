@@ -3,7 +3,9 @@ package kr.adapterz.springboot.controller;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.JwtTokenProvider;
 import kr.adapterz.springboot.dto.MultipartPostCreateRequestDto;
+import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
+import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,6 +78,41 @@ class PostControllerTest {
                 .andExpect(jsonPath("$.data.poll_options").value("선택지는 필수입니다."));
 
         then(postService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("미참여 게시글 상세 응답에는 기본 투표 정보만 포함한다")
+    void getPostWithPollWithoutResult() throws Exception {
+        User author = User.of("author@example.com", "encodedPassword", "author", null);
+        Post post = new Post("개발 언어 설문", "본문", author);
+        Poll poll = new Poll(post, java.util.List.of("Java", "Kotlin"));
+        ReflectionTestUtils.setField(author, "id", 2L);
+        ReflectionTestUtils.setField(post, "id", 1L);
+        ReflectionTestUtils.setField(poll, "postId", 1L);
+        ReflectionTestUtils.setField(poll.getOptions().get(0), "id", 101L);
+        ReflectionTestUtils.setField(poll.getOptions().get(1), "id", 102L);
+        PollResponseDto pollResponse = PollResponseDto.withoutResult(poll, 3L);
+        PostDetailResponseDto response = new PostDetailResponseDto(
+                post,
+                0L,
+                0L,
+                false,
+                false,
+                pollResponse
+        );
+        given(viewerKeyResolver.createGuestViewerKey(org.mockito.ArgumentMatchers.any()))
+                .willReturn("GUEST:key");
+        given(postService.getPost(1L, "GUEST:key")).willReturn(response);
+
+        mockMvc.perform(get("/posts/{postId}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.poll.poll_id").value(1L))
+                .andExpect(jsonPath("$.data.poll.options[0].option_id").value(101L))
+                .andExpect(jsonPath("$.data.poll.options[0].content").value("Java"))
+                .andExpect(jsonPath("$.data.poll.has_voted").value(false))
+                .andExpect(jsonPath("$.data.poll.total_vote_count").value(3L))
+                .andExpect(jsonPath("$.data.poll.selected_option_id").doesNotExist())
+                .andExpect(jsonPath("$.data.poll.result").doesNotExist());
     }
 
     private PostCreateResponseDto createResponse(Long id) {
