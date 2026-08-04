@@ -25,6 +25,8 @@ class MySqlMigrationTest {
 
     private static final List<String> EXPECTED_TABLES = List.of(
             "comments",
+            "poll_options",
+            "polls",
             "post_drafts",
             "post_images",
             "post_likes",
@@ -34,6 +36,16 @@ class MySqlMigrationTest {
             "posts",
             "refresh_tokens",
             "users"
+    );
+
+    private static final List<String> EXPECTED_POLL_CONSTRAINTS = List.of(
+            "chk_poll_options_content",
+            "chk_poll_options_order",
+            "fk_poll_options_poll",
+            "fk_polls_post",
+            "PRIMARY",
+            "uk_poll_options_poll_id",
+            "uk_poll_options_poll_order"
     );
 
     @Container
@@ -55,12 +67,12 @@ class MySqlMigrationTest {
         Integer successfulMigrationCount = jdbcClient.sql("""
                         SELECT COUNT(*)
                         FROM flyway_schema_history
-                        WHERE version = '1'
+                        WHERE version IN ('1', '2')
                           AND success = TRUE
                         """)
                 .query(Integer.class)
                 .single();
-        assertThat(successfulMigrationCount).isOne();
+        assertThat(successfulMigrationCount).isEqualTo(2);
 
         List<String> tables = jdbcClient.sql("""
                         SELECT table_name
@@ -72,5 +84,16 @@ class MySqlMigrationTest {
                 .query(String.class)
                 .list();
         assertThat(tables).containsExactlyElementsOf(EXPECTED_TABLES);
+
+        List<String> pollConstraints = jdbcClient.sql("""
+                        SELECT DISTINCT constraint_name
+                        FROM information_schema.table_constraints
+                        WHERE table_schema = DATABASE()
+                          AND table_name IN ('polls', 'poll_options')
+                        ORDER BY constraint_name
+                        """)
+                .query(String.class)
+                .list();
+        assertThat(pollConstraints).containsExactlyElementsOf(EXPECTED_POLL_CONSTRAINTS);
     }
 }
