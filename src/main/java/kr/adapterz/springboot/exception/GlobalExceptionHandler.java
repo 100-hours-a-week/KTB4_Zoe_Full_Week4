@@ -63,6 +63,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "post_not_found");
     }
 
+    @ExceptionHandler(PollNotFoundException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePollNotFound(PollNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, "poll_not_found");
+    }
+
+    @ExceptionHandler(PollOptionMismatchException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePollOptionMismatch(PollOptionMismatchException e) {
+        return error(HttpStatus.BAD_REQUEST, "poll_option_mismatch");
+    }
+
     @ExceptionHandler(CommentNotFoundException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleCommentNotFound(CommentNotFoundException e) {
         return error(HttpStatus.NOT_FOUND, "comment_not_found");

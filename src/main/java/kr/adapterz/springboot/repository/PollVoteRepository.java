@@ -3,6 +3,7 @@ package kr.adapterz.springboot.repository;
 import kr.adapterz.springboot.entity.PollVote;
 import kr.adapterz.springboot.entity.PollVoteId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,4 +40,29 @@ public interface PollVoteRepository extends
             group by pv.id.pollId, pv.optionId
             """)
     List<PollVoteCountProjection> countVotesByPollIds(@Param("pollIds") List<Long> pollIds);
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            INSERT INTO poll_votes (
+                poll_id,
+                user_id,
+                option_id,
+                created_at,
+                updated_at
+            ) VALUES (
+                :pollId,
+                :userId,
+                :optionId,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            ) AS new_vote
+            ON DUPLICATE KEY UPDATE
+                option_id = new_vote.option_id,
+                updated_at = new_vote.updated_at
+            """, nativeQuery = true)
+    int upsertVote(
+            @Param("pollId") Long pollId,
+            @Param("userId") Long userId,
+            @Param("optionId") Long optionId
+    );
 }
