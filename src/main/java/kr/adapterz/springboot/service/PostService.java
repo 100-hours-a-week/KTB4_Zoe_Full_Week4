@@ -33,6 +33,8 @@ import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.PollRepository;
+import kr.adapterz.springboot.repository.PollTotalVoteCountProjection;
+import kr.adapterz.springboot.repository.PollVoteCountProjection;
 import kr.adapterz.springboot.repository.PollVoteRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -124,9 +126,17 @@ public class PostService {
         Map<Long, Long> likeCounts = toCountMap(likeRepository.countByPostIdIn(postIds));
         Map<Long, String> thumbnailUrls = toThumbnailMap(postImageRepository.findThumbnailsByPostIdIn(postIds));
         Set<Long> editedPostIds = postVersionRepository.findEditedPostIds(postIds);
+        Map<Long, PollResponseDto> polls = createPollResponses(postIds, getCurrentUserIdOrNull());
 
         List<PostSummaryResponseDto> posts = postEntities.stream()
-                .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds, thumbnailUrls))
+                .map(post -> toSummaryResponse(
+                        post,
+                        likeCounts,
+                        commentCounts,
+                        editedPostIds,
+                        thumbnailUrls,
+                        polls
+                ))
                 .toList();
 
         Long nextCursor = hasNext ? postIds.get(postIds.size() - 1) : null;
@@ -264,13 +274,80 @@ public class PostService {
             Map<Long, Long> likeCounts,
             Map<Long, Long> commentCounts,
             Set<Long> editedPostIds,
-            Map<Long, String> thumbnailUrls
+            Map<Long, String> thumbnailUrls,
+            Map<Long, PollResponseDto> polls
     ) {
         long commentCount = commentCounts.getOrDefault(post.getId(), 0L);
         long likeCount = likeCounts.getOrDefault(post.getId(), 0L);
         boolean edited = editedPostIds.contains(post.getId());
 
-        return new PostSummaryResponseDto(post, likeCount, commentCount, edited, thumbnailUrls.get(post.getId()));
+        return new PostSummaryResponseDto(
+                post,
+                likeCount,
+                commentCount,
+                edited,
+                thumbnailUrls.get(post.getId()),
+                polls.get(post.getId())
+        );
+    }
+
+    private Map<Long, PollResponseDto> createPollResponses(List<Long> postIds, Long currentUserId) {
+        List<Poll> polls = pollRepository.findAllByPostIdsWithOptions(postIds);
+        if (polls.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> pollIds = polls.stream()
+                .map(Poll::getPostId)
+                .toList();
+        Map<Long, Long> totalVoteCounts = pollVoteRepository.countTotalVotesByPollIds(pollIds).stream()
+                .collect(Collectors.toMap(
+                        PollTotalVoteCountProjection::getPollId,
+                        PollTotalVoteCountProjection::getTotalVoteCount
+                ));
+
+        Map<Long, PollVote> currentVotes = findCurrentVotesByPollId(currentUserId, pollIds);
+        List<Long> votedPollIds = currentVotes.keySet().stream().toList();
+        Map<Long, List<PollVoteCountProjection>> voteCounts = votedPollIds.isEmpty()
+                ? Map.of()
+                : pollVoteRepository.countVotesByPollIds(votedPollIds).stream()
+                        .collect(Collectors.groupingBy(PollVoteCountProjection::getPollId));
+
+        return polls.stream()
+                .collect(Collectors.toMap(
+                        Poll::getPostId,
+                        poll -> createPollResponse(
+                                poll,
+                                totalVoteCounts.getOrDefault(poll.getPostId(), 0L),
+                                currentVotes.get(poll.getPostId()),
+                                voteCounts.getOrDefault(poll.getPostId(), List.of())
+                        )
+                ));
+    }
+
+    private Map<Long, PollVote> findCurrentVotesByPollId(Long currentUserId, List<Long> pollIds) {
+        if (currentUserId == null) {
+            return Map.of();
+        }
+
+        return pollVoteRepository.findAllByIdUserIdAndIdPollIdIn(currentUserId, pollIds).stream()
+                .collect(Collectors.toMap(
+                        vote -> vote.getPoll().getPostId(),
+                        vote -> vote
+                ));
+    }
+
+    private PollResponseDto createPollResponse(
+            Poll poll,
+            long totalVoteCount,
+            PollVote currentVote,
+            List<PollVoteCountProjection> voteCounts
+    ) {
+        if (currentVote == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        return PollResponseDto.withResult(poll, totalVoteCount, currentVote, voteCounts);
     }
 
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {

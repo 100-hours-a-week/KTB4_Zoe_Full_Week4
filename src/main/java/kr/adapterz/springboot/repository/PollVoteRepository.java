@@ -15,10 +15,28 @@ public interface PollVoteRepository extends
     long countByIdPollId(Long pollId);
 
     @Query("""
-            select pv.optionId as optionId, count(pv) as voteCount
+            select pv.id.pollId as pollId, pv.optionId as optionId, count(pv) as voteCount
             from PollVote pv
             where pv.id.pollId = :pollId
-            group by pv.optionId
+            group by pv.id.pollId, pv.optionId
             """)
     List<PollVoteCountProjection> countVotesByOption(@Param("pollId") Long pollId);
+
+    List<PollVote> findAllByIdUserIdAndIdPollIdIn(Long userId, List<Long> pollIds);
+
+    @Query("""
+            select pv.id.pollId as pollId, count(pv) as totalVoteCount
+            from PollVote pv
+            where pv.id.pollId in :pollIds
+            group by pv.id.pollId
+            """)
+    List<PollTotalVoteCountProjection> countTotalVotesByPollIds(@Param("pollIds") List<Long> pollIds);
+
+    @Query("""
+            select pv.id.pollId as pollId, pv.optionId as optionId, count(pv) as voteCount
+            from PollVote pv
+            where pv.id.pollId in :pollIds
+            group by pv.id.pollId, pv.optionId
+            """)
+    List<PollVoteCountProjection> countVotesByPollIds(@Param("pollIds") List<Long> pollIds);
 }
