@@ -14,6 +14,7 @@ import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostStatus;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
+import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
@@ -28,6 +29,7 @@ import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
+import kr.adapterz.springboot.repository.PollRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -49,6 +51,7 @@ public class PostService {
     private static final int MAX_POST_PAGE_SIZE = 50;
 
     private final PostRepository postRepository;
+    private final PollRepository pollRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final CommentRepository commentRepository;
@@ -62,10 +65,15 @@ public class PostService {
     @Transactional
     public PostCreateResponseDto createPost(MultipartPostCreateRequestDto request) {
         List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
-        return createPost(request.getTitle(), request.getContent(), imageUrls);
+        return createPost(request.getTitle(), request.getContent(), imageUrls, request.getPollOptions());
     }
 
-    private PostCreateResponseDto createPost(String title, String content, List<String> imageUrls) {
+    private PostCreateResponseDto createPost(
+            String title,
+            String content,
+            List<String> imageUrls,
+            List<String> pollOptions
+    ) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
@@ -81,8 +89,9 @@ public class PostService {
         post.replaceImages(imageUrls);
 
         Post savedPost = postRepository.save(post);
+        Poll savedPoll = pollRepository.save(new Poll(savedPost, pollOptions));
 
-        return new PostCreateResponseDto(savedPost);
+        return new PostCreateResponseDto(savedPost, savedPoll);
     }
 
     @Transactional(readOnly = true)
