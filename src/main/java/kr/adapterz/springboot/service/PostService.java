@@ -3,7 +3,8 @@ package kr.adapterz.springboot.service;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
-import kr.adapterz.springboot.dto.MultipartPostRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostCreateRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostUpdateRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
@@ -59,7 +60,7 @@ public class PostService {
     private final ImageStorageService imageStorageService;
 
     @Transactional
-    public PostCreateResponseDto createPost(MultipartPostRequestDto request) {
+    public PostCreateResponseDto createPost(MultipartPostCreateRequestDto request) {
         List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
         return createPost(request.getTitle(), request.getContent(), imageUrls);
     }
@@ -139,7 +140,7 @@ public class PostService {
     }
 
     @Transactional
-    public PostUpdateResponseDto updatePost(Long postId, MultipartPostRequestDto request) {
+    public PostUpdateResponseDto updatePost(Long postId, MultipartPostUpdateRequestDto request) {
         List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
         boolean replaceImages = !imageUrls.isEmpty();
 
