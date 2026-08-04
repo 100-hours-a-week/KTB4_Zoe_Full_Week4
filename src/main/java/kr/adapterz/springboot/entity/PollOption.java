@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -50,5 +51,16 @@ public class PollOption {
         this.content = content;
         this.optionOrder = optionOrder;
         this.createdAt = LocalDateTime.now();
+    }
+
+    boolean belongsTo(Poll poll) {
+        if (this.poll == poll) {
+            return true;
+        }
+
+        return this.poll != null
+                && poll != null
+                && this.poll.getPostId() != null
+                && Objects.equals(this.poll.getPostId(), poll.getPostId());
     }
 }
