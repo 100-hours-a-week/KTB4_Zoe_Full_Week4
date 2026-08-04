@@ -3,6 +3,7 @@ package kr.adapterz.springboot.controller;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.JwtTokenProvider;
 import kr.adapterz.springboot.dto.PollVoteRequestDto;
+import kr.adapterz.springboot.dto.PollVoteCancelResponseDto;
 import kr.adapterz.springboot.dto.PollVoteUpdateResponseDto;
 import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.Post;
@@ -30,6 +31,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -105,6 +107,22 @@ class PollVoteControllerTest {
                         .content("{\"option_id\":999}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("poll_option_mismatch"));
+    }
+
+    @Test
+    @DisplayName("투표 참여 취소 후 미참여 상태와 전체 참여 인원을 반환한다")
+    void cancelPollVote() throws Exception {
+        given(pollVoteService.cancelVote(1L))
+                .willReturn(new PollVoteCancelResponseDto(1L, 2L));
+
+        mockMvc.perform(delete("/posts/{postId}/poll/vote", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("poll_vote_cancelled"))
+                .andExpect(jsonPath("$.data.poll_id").value(1L))
+                .andExpect(jsonPath("$.data.has_voted").value(false))
+                .andExpect(jsonPath("$.data.total_vote_count").value(2L))
+                .andExpect(jsonPath("$.data.selected_option_id").doesNotExist())
+                .andExpect(jsonPath("$.data.result").doesNotExist());
     }
 
     private PollVoteUpdateResponseDto createResponse() {

@@ -65,4 +65,15 @@ public interface PollVoteRepository extends
             @Param("userId") Long userId,
             @Param("optionId") Long optionId
     );
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            delete from PollVote pv
+            where pv.id.pollId = :pollId
+              and pv.id.userId = :userId
+            """)
+    int deleteCurrentVote(
+            @Param("pollId") Long pollId,
+            @Param("userId") Long userId
+    );
 }

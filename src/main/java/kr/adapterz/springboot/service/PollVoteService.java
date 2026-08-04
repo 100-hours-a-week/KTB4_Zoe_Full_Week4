@@ -1,6 +1,7 @@
 package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
+import kr.adapterz.springboot.dto.PollVoteCancelResponseDto;
 import kr.adapterz.springboot.dto.PollVoteRequestDto;
 import kr.adapterz.springboot.dto.PollVoteUpdateResponseDto;
 import kr.adapterz.springboot.entity.Poll;
@@ -36,21 +37,8 @@ public class PollVoteService {
 
     @Transactional
     public PollVoteUpdateResponseDto vote(Long postId, PollVoteRequestDto request) {
-        Long currentUserId = currentUserProvider.getCurrentUserId();
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(UserNotFoundException::new);
-        if (currentUser.isDeleted()) {
-            throw new DeletedUserException();
-        }
-
-        Poll lockedPoll = pollRepository.findByPostIdForParticipation(postId)
-                .orElseThrow(PollNotFoundException::new);
-        if (lockedPoll.getPost().isDeleted()) {
-            throw new PollNotFoundException();
-        }
-        if (lockedPoll.getPost().isBlinded()) {
-            throw new PostBlindedException();
-        }
+        User currentUser = getCurrentActiveUser();
+        Poll lockedPoll = getLockedPollForParticipation(postId);
 
         PollOption selectedOption = pollOptionRepository.findByIdAndPollPostId(
                         request.getOptionId(),
@@ -85,5 +73,38 @@ public class PollVoteService {
                 totalVoteCount,
                 voteCounts
         );
+    }
+
+    @Transactional
+    public PollVoteCancelResponseDto cancelVote(Long postId) {
+        User currentUser = getCurrentActiveUser();
+        Poll lockedPoll = getLockedPollForParticipation(postId);
+
+        pollVoteRepository.deleteCurrentVote(lockedPoll.getPostId(), currentUser.getId());
+        long totalVoteCount = pollVoteRepository.countByIdPollId(lockedPoll.getPostId());
+
+        return new PollVoteCancelResponseDto(lockedPoll.getPostId(), totalVoteCount);
+    }
+
+    private User getCurrentActiveUser() {
+        Long currentUserId = currentUserProvider.getCurrentUserId();
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(UserNotFoundException::new);
+        if (currentUser.isDeleted()) {
+            throw new DeletedUserException();
+        }
+        return currentUser;
+    }
+
+    private Poll getLockedPollForParticipation(Long postId) {
+        Poll lockedPoll = pollRepository.findByPostIdForParticipation(postId)
+                .orElseThrow(PollNotFoundException::new);
+        if (lockedPoll.getPost().isDeleted()) {
+            throw new PollNotFoundException();
+        }
+        if (lockedPoll.getPost().isBlinded()) {
+            throw new PostBlindedException();
+        }
+        return lockedPoll;
     }
 }

@@ -2,6 +2,7 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.PollVoteRequestDto;
+import kr.adapterz.springboot.dto.PollVoteCancelResponseDto;
 import kr.adapterz.springboot.dto.PollVoteUpdateResponseDto;
 import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.PollVote;
@@ -188,6 +189,35 @@ class PollVoteServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("현재 투표를 취소하면 투표 행을 삭제하고 미참여 응답을 반환한다")
+    void cancelCurrentVote() {
+        PollContext context = savePollContext();
+        Long pollId = context.poll().getPostId();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.voter().getId());
+        pollVoteService.vote(pollId, request(context.poll().getOptions().getFirst().getId()));
+
+        PollVoteCancelResponseDto response = pollVoteService.cancelVote(pollId);
+
+        assertThat(response.getPollId()).isEqualTo(pollId);
+        assertThat(response.isHasVoted()).isFalse();
+        assertThat(response.getTotalVoteCount()).isZero();
+        assertThat(pollVoteRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("참여하지 않은 사용자의 취소 요청은 멱등 성공한다")
+    void cancelVoteIdempotentlyWhenNotParticipating() {
+        PollContext context = savePollContext();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.voter().getId());
+
+        PollVoteCancelResponseDto response = pollVoteService.cancelVote(context.poll().getPostId());
+
+        assertThat(response.isHasVoted()).isFalse();
+        assertThat(response.getTotalVoteCount()).isZero();
+        assertThat(pollVoteRepository.count()).isZero();
+    }
+
+    @Test
     @DisplayName("동일 사용자의 동시 최초 참여는 복합 기본키로 하나의 현재 투표만 유지한다")
     void keepSingleVoteWhenFirstVotesAreConcurrent() throws Exception {
         PollContext context = savePollContext();
@@ -201,6 +231,71 @@ class PollVoteServiceIntegrationTest {
         List<PollVote> votes = pollVoteRepository.findAll();
         assertThat(votes).hasSize(1);
         assertThat(votes.getFirst().getOptionId()).isEqualTo(optionId);
+    }
+
+    @Test
+    @DisplayName("동일 사용자의 동시 취소 요청은 모두 성공하고 현재 투표를 삭제한다")
+    void cancelVoteIdempotentlyWhenRequestsAreConcurrent() throws Exception {
+        PollContext context = savePollContext();
+        Long pollId = context.poll().getPostId();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.voter().getId());
+        pollVoteService.vote(pollId, request(context.poll().getOptions().getFirst().getId()));
+
+        runConcurrently(CONCURRENT_REQUEST_COUNT, () -> pollVoteService.cancelVote(pollId));
+
+        assertThat(pollVoteRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("한 사용자의 취소와 다른 사용자의 참여를 동시에 처리한다")
+    void processCancellationAndAnotherUserVoteConcurrently() throws Exception {
+        PollContext context = savePollContext();
+        User anotherVoter = saveUser("another-voter@example.com", "another-voter");
+        Long pollId = context.poll().getPostId();
+        Long optionId = context.poll().getOptions().getFirst().getId();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.voter().getId());
+        pollVoteService.vote(pollId, request(optionId));
+
+        ThreadLocal<Long> userIdByThread = new ThreadLocal<>();
+        given(currentUserProvider.getCurrentUserId()).willAnswer(invocation -> userIdByThread.get());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try {
+            Future<PollVoteCancelResponseDto> cancellation = executor.submit(() -> {
+                userIdByThread.set(context.voter().getId());
+                try {
+                    ready.countDown();
+                    start.await();
+                    return pollVoteService.cancelVote(pollId);
+                } finally {
+                    userIdByThread.remove();
+                }
+            });
+            Future<PollVoteUpdateResponseDto> participation = executor.submit(() -> {
+                userIdByThread.set(anotherVoter.getId());
+                try {
+                    ready.countDown();
+                    start.await();
+                    return pollVoteService.vote(pollId, request(optionId));
+                } finally {
+                    userIdByThread.remove();
+                }
+            });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(cancellation.get(10, TimeUnit.SECONDS).getTotalVoteCount()).isBetween(0L, 1L);
+            assertThat(participation.get(10, TimeUnit.SECONDS).getResult().getTotalVoteCount()).isBetween(1L, 2L);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        List<PollVote> remainingVotes = pollVoteRepository.findAll();
+        assertThat(remainingVotes).hasSize(1);
+        assertThat(pollVoteRepository.findById(new PollVoteId(pollId, context.voter().getId()))).isEmpty();
+        assertThat(pollVoteRepository.findById(new PollVoteId(pollId, anotherVoter.getId()))).isPresent();
     }
 
     private void runConcurrently(int requestCount, Runnable request) throws Exception {
