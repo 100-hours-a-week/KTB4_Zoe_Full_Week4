@@ -2,6 +2,8 @@ package kr.adapterz.springboot.service;
 
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.dto.MultipartPostUpdateRequestDto;
+import kr.adapterz.springboot.dto.PollVoteRequestDto;
+import kr.adapterz.springboot.dto.PollVoteUpdateResponseDto;
 import kr.adapterz.springboot.dto.PollUpdateRequestDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Poll;
@@ -14,6 +16,7 @@ import kr.adapterz.springboot.repository.PollVoteRepository;
 import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.UserRepository;
+import kr.adapterz.springboot.service.PollVoteService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -29,6 +32,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,6 +55,9 @@ class PostUpdatePollIntegrationTest {
 
     @Autowired
     private PostService postService;
+
+    @Autowired
+    private PollVoteService pollVoteService;
 
     @Autowired
     private UserRepository userRepository;
@@ -151,8 +162,138 @@ class PostUpdatePollIntegrationTest {
         then(imageStorageService).shouldHaveNoInteractions();
     }
 
+    @Test
+    @DisplayName("다른 사용자의 동시 참여와 투표 포함 게시글 수정은 한 요청씩 처리한다")
+    void serializeConcurrentVoteAndPollUpdate() throws Exception {
+        PollContext context = saveContext();
+        User voter = userRepository.saveAndFlush(User.of("update-voter@example.com", "password", "update-voter", null));
+        given(imageStorageService.storePostImages(org.mockito.ArgumentMatchers.any())).willReturn(List.of());
+
+        ThreadLocal<Long> userIdByThread = new ThreadLocal<>();
+        given(currentUserProvider.getCurrentUserId()).willAnswer(invocation -> userIdByThread.get());
+        PollVoteRequestDto voteRequest = new PollVoteRequestDto();
+        ReflectionTestUtils.setField(voteRequest, "option_id", context.poll().getOptions().getFirst().getId());
+        PollUpdateRequestDto updateRequest = pollRequest(List.of(
+                option(context.poll().getOptions().getFirst().getId(), "Java"),
+                option(null, "Python")
+        ));
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        Object updateResult = null;
+        try {
+            Future<Object> update = executor.submit(() -> {
+                userIdByThread.set(context.author().getId());
+                try {
+                    ready.countDown();
+                    start.await();
+                    return postService.updatePost(context.post().getId(), postRequest("동시 수정", "본문"), updateRequest);
+                } catch (RuntimeException e) {
+                    return e;
+                } finally {
+                    userIdByThread.remove();
+                }
+            });
+            Future<Object> vote = executor.submit(() -> {
+                userIdByThread.set(voter.getId());
+                try {
+                    ready.countDown();
+                    start.await();
+                    return pollVoteService.vote(context.post().getId(), voteRequest);
+                } catch (RuntimeException e) {
+                    return e;
+                } finally {
+                    userIdByThread.remove();
+                }
+            });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            updateResult = update.get(10, TimeUnit.SECONDS);
+            Object voteResult = vote.get(10, TimeUnit.SECONDS);
+
+            assertThat(updateResult)
+                    .isInstanceOfAny(PostUpdateResponseDto.class, PollOptionsLockedException.class);
+            assertThat(voteResult).isInstanceOf(PollVoteUpdateResponseDto.class);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(pollVoteRepository.count()).isOne();
+        assertThat(updateResult).isNotNull();
+        Poll updatedPoll = pollRepository.findByPostIdWithOptions(context.post().getId()).orElseThrow();
+        Post updatedPost = postRepository.findById(context.post().getId()).orElseThrow();
+
+        if (updateResult instanceof PostUpdateResponseDto) {
+            assertThat(updatedPost.getTitle()).isEqualTo("동시 수정");
+            assertThat(updatedPoll.getOptions())
+                    .extracting(option -> option.getContent())
+                    .containsExactly("Java", "Python");
+        } else {
+            assertThat(updateResult).isInstanceOf(PollOptionsLockedException.class);
+            assertThat(updatedPost.getTitle()).isEqualTo("원래 제목");
+            assertThat(updatedPoll.getOptions())
+                    .extracting(option -> option.getContent())
+                    .containsExactly("Java", "Kotlin");
+        }
+    }
+
+    @Test
+    @DisplayName("다른 투표의 option_id가 포함되면 게시글과 투표를 수정하지 않는다")
+    void rejectOptionIdFromAnotherPoll() {
+        PollContext context = saveContext();
+        PollContext other = saveContext("other-update-author@example.com", "other-update-author");
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.author().getId());
+        given(imageStorageService.storePostImages(org.mockito.ArgumentMatchers.any())).willReturn(List.of());
+
+        assertThatThrownBy(() -> postService.updatePost(
+                context.post().getId(),
+                postRequest("실패 제목", "실패 본문"),
+                pollRequest(List.of(
+                        option(other.poll().getOptions().getFirst().getId(), "Java"),
+                        option(null, "Python")
+                ))
+        )).isInstanceOf(kr.adapterz.springboot.exception.PollOptionUpdateInvalidException.class);
+
+        assertThat(postRepository.findById(context.post().getId()).orElseThrow().getTitle())
+                .isEqualTo("원래 제목");
+        assertThat(pollRepository.findByPostIdWithOptions(context.post().getId()).orElseThrow().getOptions())
+                .extracting(option -> option.getContent())
+                .containsExactly("Java", "Kotlin");
+    }
+
+    @Test
+    @DisplayName("선택지는 최대 5개까지 수정할 수 있다")
+    void updateFiveOptions() {
+        PollContext context = saveContext();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.author().getId());
+        given(imageStorageService.storePostImages(org.mockito.ArgumentMatchers.any())).willReturn(List.of());
+
+        postService.updatePost(
+                context.post().getId(),
+                postRequest("다섯 선택지", "본문"),
+                pollRequest(List.of(
+                        option(context.poll().getOptions().get(0).getId(), "Java"),
+                        option(context.poll().getOptions().get(1).getId(), "Kotlin"),
+                        option(null, "Python"),
+                        option(null, "Go"),
+                        option(null, "Rust")
+                ))
+        );
+
+        assertThat(pollRepository.findByPostIdWithOptions(context.post().getId()).orElseThrow().getOptions())
+                .hasSize(5)
+                .extracting(option -> option.getOptionOrder())
+                .containsExactly(0, 1, 2, 3, 4);
+    }
+
     private PollContext saveContext() {
-        User author = userRepository.saveAndFlush(User.of("update-author@example.com", "password", "update-author", null));
+        return saveContext("update-author@example.com", "update-author");
+    }
+
+    private PollContext saveContext(String email, String nickname) {
+        User author = userRepository.saveAndFlush(User.of(email, "password", nickname, null));
         Post post = postRepository.saveAndFlush(new Post("원래 제목", "원래 본문", author));
         Poll poll = pollRepository.saveAndFlush(new Poll(post, List.of("Java", "Kotlin")));
         return new PollContext(author, post, poll);

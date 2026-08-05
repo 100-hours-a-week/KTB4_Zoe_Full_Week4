@@ -7,11 +7,11 @@ import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
-import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.GlobalExceptionHandler;
+import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.service.PostService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -149,6 +149,56 @@ class PostControllerTest {
                 .andExpect(jsonPath("$.message").value("invalid_request_body"));
 
         then(postService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("선택지가 1개인 poll 파트는 검증에 실패한다")
+    void rejectPollWithTooFewOptions() throws Exception {
+        MockMultipartFile pollPart = new MockMultipartFile(
+                "poll",
+                "poll.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                "{\"options\":[{\"content\":\"Java\"}]}".getBytes()
+        );
+
+        mockMvc.perform(multipart("/posts/{postId}", 1L)
+                        .file(pollPart)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .param("title", "수정 제목")
+                        .param("content", "수정 본문"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("validation_failed"));
+
+        then(postService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("투표 선택지가 잠긴 수정 요청은 409 응답을 반환한다")
+    void returnConflictWhenPollOptionsAreLocked() throws Exception {
+        given(postService.updatePost(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .willThrow(new PollOptionsLockedException());
+        MockMultipartFile pollPart = new MockMultipartFile(
+                "poll",
+                "poll.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                "{\"options\":[{\"content\":\"Java\"},{\"content\":\"Python\"}]}".getBytes()
+        );
+
+        mockMvc.perform(multipart("/posts/{postId}", 1L)
+                        .file(pollPart)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .param("title", "수정 제목")
+                        .param("content", "수정 본문"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("poll_options_locked"));
     }
 
     @Test
