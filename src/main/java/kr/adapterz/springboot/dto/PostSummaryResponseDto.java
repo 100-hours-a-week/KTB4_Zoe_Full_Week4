@@ -38,11 +38,24 @@ public class PostSummaryResponseDto {
 
     private WriterResponseDto writer;
 
+    private PollResponseDto poll;
+
     public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited) {
-        this(post, likeCount, commentCount, edited, post.getThumbnailUrl());
+        this(post, likeCount, commentCount, edited, post.getThumbnailUrl(), null);
     }
 
     public PostSummaryResponseDto(Post post, long likeCount, long commentCount, boolean edited, String thumbnailUrl) {
+        this(post, likeCount, commentCount, edited, thumbnailUrl, null);
+    }
+
+    public PostSummaryResponseDto(
+            Post post,
+            long likeCount,
+            long commentCount,
+            boolean edited,
+            String thumbnailUrl,
+            PollResponseDto poll
+    ) {
         this.postId = post.getId();
         this.title = post.isBlinded() ? BLINDED_POST_TITLE : post.getTitle();
         this.thumbnailUrl = post.isBlinded() ? null : thumbnailUrl;
@@ -52,5 +65,6 @@ public class PostSummaryResponseDto {
         this.viewCount = post.getViewCount();
         this.edited = edited;
         this.writer = new WriterResponseDto(post.getAuthor());
+        this.poll = post.isBlinded() ? null : poll;
     }
 }

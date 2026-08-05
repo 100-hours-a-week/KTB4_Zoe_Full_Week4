@@ -3,11 +3,13 @@ package kr.adapterz.springboot.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import kr.adapterz.springboot.dto.ApiResponseDto;
-import kr.adapterz.springboot.dto.MultipartPostRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostCreateRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostUpdateRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
+import kr.adapterz.springboot.dto.PollUpdateRequestDto;
 import kr.adapterz.springboot.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,7 +27,7 @@ public class PostController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseDto<PostCreateResponseDto>> createPostWithImages(
-            @Valid @ModelAttribute MultipartPostRequestDto request
+            @Valid @ModelAttribute MultipartPostCreateRequestDto request
     ) {
         PostCreateResponseDto response = postService.createPost(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -52,9 +54,10 @@ public class PostController {
     @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponseDto<PostUpdateResponseDto>> updatePostWithImages(
             @PathVariable Long postId,
-            @Valid @ModelAttribute MultipartPostRequestDto request
+            @Valid @ModelAttribute MultipartPostUpdateRequestDto request,
+            @Valid @RequestPart(value = "poll", required = false) PollUpdateRequestDto poll
     ) {
-        PostUpdateResponseDto response = postService.updatePost(postId, request);
+        PostUpdateResponseDto response = postService.updatePost(postId, request, poll);
         return ResponseEntity.ok(new ApiResponseDto<>("post_updated", response));
     }
 

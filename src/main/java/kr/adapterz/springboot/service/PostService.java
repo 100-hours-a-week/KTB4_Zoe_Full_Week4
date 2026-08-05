@@ -3,20 +3,31 @@ package kr.adapterz.springboot.service;
 import kr.adapterz.springboot.auth.CurrentUserProvider;
 import kr.adapterz.springboot.auth.ForbiddenException;
 import kr.adapterz.springboot.auth.UnauthorizedException;
-import kr.adapterz.springboot.dto.MultipartPostRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostCreateRequestDto;
+import kr.adapterz.springboot.dto.MultipartPostUpdateRequestDto;
 import kr.adapterz.springboot.dto.PostCreateResponseDto;
 import kr.adapterz.springboot.dto.PostDetailResponseDto;
 import kr.adapterz.springboot.dto.PostListResponseDto;
+import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
+import kr.adapterz.springboot.dto.PollUpdateRequestDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostStatus;
 import kr.adapterz.springboot.entity.PostView;
 import kr.adapterz.springboot.entity.PostVersion;
+import kr.adapterz.springboot.entity.Poll;
+import kr.adapterz.springboot.entity.PollVote;
+import kr.adapterz.springboot.entity.PollVoteId;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
+import kr.adapterz.springboot.exception.PollNotFoundException;
+import kr.adapterz.springboot.exception.PollOptionDuplicateException;
+import kr.adapterz.springboot.exception.PollOptionMismatchException;
+import kr.adapterz.springboot.exception.PollOptionUpdateInvalidException;
+import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
@@ -27,6 +38,11 @@ import kr.adapterz.springboot.repository.PostRepository;
 import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
+import kr.adapterz.springboot.repository.PollRepository;
+import kr.adapterz.springboot.repository.PollOptionRepository;
+import kr.adapterz.springboot.repository.PollTotalVoteCountProjection;
+import kr.adapterz.springboot.repository.PollVoteCountProjection;
+import kr.adapterz.springboot.repository.PollVoteRepository;
 import kr.adapterz.springboot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -48,6 +64,9 @@ public class PostService {
     private static final int MAX_POST_PAGE_SIZE = 50;
 
     private final PostRepository postRepository;
+    private final PollRepository pollRepository;
+    private final PollOptionRepository pollOptionRepository;
+    private final PollVoteRepository pollVoteRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
     private final CommentRepository commentRepository;
@@ -59,12 +78,17 @@ public class PostService {
     private final ImageStorageService imageStorageService;
 
     @Transactional
-    public PostCreateResponseDto createPost(MultipartPostRequestDto request) {
+    public PostCreateResponseDto createPost(MultipartPostCreateRequestDto request) {
         List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
-        return createPost(request.getTitle(), request.getContent(), imageUrls);
+        return createPost(request.getTitle(), request.getContent(), imageUrls, request.getPollOptions());
     }
 
-    private PostCreateResponseDto createPost(String title, String content, List<String> imageUrls) {
+    private PostCreateResponseDto createPost(
+            String title,
+            String content,
+            List<String> imageUrls,
+            List<String> pollOptions
+    ) {
         Long currentUserId = currentUserProvider.getCurrentUserId();
 
         User author = userRepository.findById(currentUserId)
@@ -80,8 +104,9 @@ public class PostService {
         post.replaceImages(imageUrls);
 
         Post savedPost = postRepository.save(post);
+        Poll savedPoll = pollRepository.save(new Poll(savedPost, pollOptions));
 
-        return new PostCreateResponseDto(savedPost);
+        return new PostCreateResponseDto(savedPost, savedPoll);
     }
 
     @Transactional(readOnly = true)
@@ -109,9 +134,17 @@ public class PostService {
         Map<Long, Long> likeCounts = toCountMap(likeRepository.countByPostIdIn(postIds));
         Map<Long, String> thumbnailUrls = toThumbnailMap(postImageRepository.findThumbnailsByPostIdIn(postIds));
         Set<Long> editedPostIds = postVersionRepository.findEditedPostIds(postIds);
+        Map<Long, PollResponseDto> polls = createPollResponses(postIds, getCurrentUserIdOrNull());
 
         List<PostSummaryResponseDto> posts = postEntities.stream()
-                .map(post -> toSummaryResponse(post, likeCounts, commentCounts, editedPostIds, thumbnailUrls))
+                .map(post -> toSummaryResponse(
+                        post,
+                        likeCounts,
+                        commentCounts,
+                        editedPostIds,
+                        thumbnailUrls,
+                        polls
+                ))
                 .toList();
 
         Long nextCursor = hasNext ? postIds.get(postIds.size() - 1) : null;
@@ -139,19 +172,10 @@ public class PostService {
     }
 
     @Transactional
-    public PostUpdateResponseDto updatePost(Long postId, MultipartPostRequestDto request) {
-        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
-        boolean replaceImages = !imageUrls.isEmpty();
-
-        return updatePost(postId, request.getTitle(), request.getContent(), imageUrls, replaceImages);
-    }
-
-    private PostUpdateResponseDto updatePost(
+    public PostUpdateResponseDto updatePost(
             Long postId,
-            String title,
-            String content,
-            List<String> imageUrls,
-            boolean replaceImages
+            MultipartPostUpdateRequestDto request,
+            PollUpdateRequestDto pollRequest
     ) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
@@ -169,6 +193,29 @@ public class PostService {
             throw new PostBlindedException();
         }
 
+        if (pollRequest != null) {
+            pollRepository.findByPostIdForUpdate(postId)
+                    .orElseThrow(PollNotFoundException::new);
+            if (pollVoteRepository.countByIdPollId(postId) > 0) {
+                throw new PollOptionsLockedException();
+            }
+
+            validatePollOptionReferences(pollOptionRepository.findIdsByPollPostId(postId), pollRequest);
+            pollOptionRepository.shiftOptionOrders(postId);
+            Poll poll = pollRepository.findByPostIdWithOptions(postId)
+                    .orElseThrow(PollNotFoundException::new);
+            try {
+                poll.replaceOptions(pollRequest.getOptions().stream()
+                        .map(option -> new Poll.OptionUpdate(option.getOptionId(), option.getContent()))
+                        .toList());
+            } catch (IllegalArgumentException e) {
+                throw new PollOptionUpdateInvalidException();
+            }
+        }
+
+        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
+        boolean replaceImages = !imageUrls.isEmpty();
+
         int nextVersion = postVersionRepository.findLastVersionNumber(post.getId()) + 1;
         postVersionRepository.save(new PostVersion(
                 post,
@@ -178,13 +225,31 @@ public class PostService {
                 nextVersion
         ));
 
-        post.changeTitle(title);
-        post.changeContent(content);
+        post.changeTitle(request.getTitle());
+        post.changeContent(request.getContent());
         if (replaceImages) {
             replaceImagesAfterDeletingExisting(post, imageUrls);
         }
 
-        return new PostUpdateResponseDto(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        return new PostUpdateResponseDto(savedPost, createPollResponse(postId, currentUserId));
+    }
+
+    private void validatePollOptionReferences(Set<Long> existingOptionIds, PollUpdateRequestDto pollRequest) {
+        Set<Long> requestedOptionIds = new java.util.HashSet<>();
+
+        for (PollUpdateRequestDto.Option option : pollRequest.getOptions()) {
+            Long optionId = option.getOptionId();
+            if (optionId == null) {
+                continue;
+            }
+            if (!requestedOptionIds.add(optionId)) {
+                throw new PollOptionDuplicateException();
+            }
+            if (!existingOptionIds.contains(optionId)) {
+                throw new PollOptionMismatchException();
+            }
+        }
     }
 
     @Transactional
@@ -209,8 +274,39 @@ public class PostService {
         boolean liked = currentUserId != null
                 && likeRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
         boolean edited = postVersionRepository.existsByPostId(post.getId());
+        PollResponseDto poll = createPollResponse(post.getId(), currentUserId);
 
-        return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited);
+        return new PostDetailResponseDto(post, commentCount, likeCount, liked, edited, poll);
+    }
+
+    private PollResponseDto createPollResponse(Long postId, Long currentUserId) {
+        Poll poll = pollRepository.findByPostIdWithOptions(postId)
+                .orElse(null);
+
+        if (poll == null) {
+            return null;
+        }
+
+        long totalVoteCount = pollVoteRepository.countByIdPollId(poll.getPostId());
+        if (currentUserId == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        PollVote currentVote = pollVoteRepository.findById(
+                        new PollVoteId(poll.getPostId(), currentUserId)
+                )
+                .orElse(null);
+
+        if (currentVote == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        return PollResponseDto.withResult(
+                poll,
+                totalVoteCount,
+                currentVote,
+                pollVoteRepository.countVotesByOption(poll.getPostId())
+        );
     }
 
     private PostSummaryResponseDto toSummaryResponse(
@@ -218,13 +314,80 @@ public class PostService {
             Map<Long, Long> likeCounts,
             Map<Long, Long> commentCounts,
             Set<Long> editedPostIds,
-            Map<Long, String> thumbnailUrls
+            Map<Long, String> thumbnailUrls,
+            Map<Long, PollResponseDto> polls
     ) {
         long commentCount = commentCounts.getOrDefault(post.getId(), 0L);
         long likeCount = likeCounts.getOrDefault(post.getId(), 0L);
         boolean edited = editedPostIds.contains(post.getId());
 
-        return new PostSummaryResponseDto(post, likeCount, commentCount, edited, thumbnailUrls.get(post.getId()));
+        return new PostSummaryResponseDto(
+                post,
+                likeCount,
+                commentCount,
+                edited,
+                thumbnailUrls.get(post.getId()),
+                polls.get(post.getId())
+        );
+    }
+
+    private Map<Long, PollResponseDto> createPollResponses(List<Long> postIds, Long currentUserId) {
+        List<Poll> polls = pollRepository.findAllByPostIdsWithOptions(postIds);
+        if (polls.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> pollIds = polls.stream()
+                .map(Poll::getPostId)
+                .toList();
+        Map<Long, Long> totalVoteCounts = pollVoteRepository.countTotalVotesByPollIds(pollIds).stream()
+                .collect(Collectors.toMap(
+                        PollTotalVoteCountProjection::getPollId,
+                        PollTotalVoteCountProjection::getTotalVoteCount
+                ));
+
+        Map<Long, PollVote> currentVotes = findCurrentVotesByPollId(currentUserId, pollIds);
+        List<Long> votedPollIds = currentVotes.keySet().stream().toList();
+        Map<Long, List<PollVoteCountProjection>> voteCounts = votedPollIds.isEmpty()
+                ? Map.of()
+                : pollVoteRepository.countVotesByPollIds(votedPollIds).stream()
+                        .collect(Collectors.groupingBy(PollVoteCountProjection::getPollId));
+
+        return polls.stream()
+                .collect(Collectors.toMap(
+                        Poll::getPostId,
+                        poll -> createPollResponse(
+                                poll,
+                                totalVoteCounts.getOrDefault(poll.getPostId(), 0L),
+                                currentVotes.get(poll.getPostId()),
+                                voteCounts.getOrDefault(poll.getPostId(), List.of())
+                        )
+                ));
+    }
+
+    private Map<Long, PollVote> findCurrentVotesByPollId(Long currentUserId, List<Long> pollIds) {
+        if (currentUserId == null) {
+            return Map.of();
+        }
+
+        return pollVoteRepository.findAllByIdUserIdAndIdPollIdIn(currentUserId, pollIds).stream()
+                .collect(Collectors.toMap(
+                        vote -> vote.getPoll().getPostId(),
+                        vote -> vote
+                ));
+    }
+
+    private PollResponseDto createPollResponse(
+            Poll poll,
+            long totalVoteCount,
+            PollVote currentVote,
+            List<PollVoteCountProjection> voteCounts
+    ) {
+        if (currentVote == null) {
+            return PollResponseDto.withoutResult(poll, totalVoteCount);
+        }
+
+        return PollResponseDto.withResult(poll, totalVoteCount, currentVote, voteCounts);
     }
 
     private Map<Long, Long> toCountMap(List<PostCountProjection> countProjections) {

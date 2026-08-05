@@ -41,12 +41,15 @@ public class PostDetailResponseDto {
     @JsonProperty("is_edited")
     private boolean edited;
 
+    private PollResponseDto poll;
+
     public PostDetailResponseDto(
             Post post,
             long commentCount,
             long likeCount,
             boolean liked,
-            boolean edited
+            boolean edited,
+            PollResponseDto poll
     ) {
         this.postId = post.getId();
         this.title = post.getTitle();
@@ -61,5 +64,6 @@ public class PostDetailResponseDto {
         this.viewCount = post.getViewCount();
         this.liked = liked;
         this.edited = edited;
+        this.poll = poll;
     }
 }
