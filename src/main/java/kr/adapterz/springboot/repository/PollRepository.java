@@ -35,4 +35,12 @@ public interface PollRepository extends JpaRepository<Poll, Long> {
             where p.postId = :postId
             """)
     Optional<Poll> findByPostIdForParticipation(@Param("postId") Long postId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select p
+            from Poll p
+            where p.postId = :postId
+            """)
+    Optional<Poll> findByPostIdForUpdate(@Param("postId") Long postId);
 }

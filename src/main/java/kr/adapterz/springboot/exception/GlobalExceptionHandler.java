@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -71,6 +72,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PollOptionMismatchException.class)
     public ResponseEntity<ApiResponseDto<Void>> handlePollOptionMismatch(PollOptionMismatchException e) {
         return error(HttpStatus.BAD_REQUEST, "poll_option_mismatch");
+    }
+
+    @ExceptionHandler(PollOptionsLockedException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePollOptionsLocked(PollOptionsLockedException e) {
+        return error(HttpStatus.CONFLICT, "poll_options_locked");
+    }
+
+    @ExceptionHandler(PollOptionUpdateInvalidException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePollOptionUpdateInvalid(PollOptionUpdateInvalidException e) {
+        return error(HttpStatus.BAD_REQUEST, "poll_options_invalid");
     }
 
     @ExceptionHandler(CommentNotFoundException.class)
@@ -141,6 +152,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiResponseDto<Map<String, String>>> handleBindException(BindException e) {
         return validationError(e);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleUnreadableRequest(HttpMessageNotReadableException e) {
+        return error(HttpStatus.BAD_REQUEST, "invalid_request_body");
     }
 
     @ExceptionHandler(Exception.class)

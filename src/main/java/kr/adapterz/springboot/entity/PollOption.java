@@ -63,4 +63,12 @@ public class PollOption {
                 && this.poll.getPostId() != null
                 && Objects.equals(this.poll.getPostId(), poll.getPostId());
     }
+
+    void changeContent(String content) {
+        this.content = content;
+    }
+
+    void changeOrder(int optionOrder) {
+        this.optionOrder = optionOrder;
+    }
 }

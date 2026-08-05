@@ -11,6 +11,7 @@ import kr.adapterz.springboot.dto.PostListResponseDto;
 import kr.adapterz.springboot.dto.PollResponseDto;
 import kr.adapterz.springboot.dto.PostSummaryResponseDto;
 import kr.adapterz.springboot.dto.PostUpdateResponseDto;
+import kr.adapterz.springboot.dto.PollUpdateRequestDto;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.PostStatus;
 import kr.adapterz.springboot.entity.PostView;
@@ -22,6 +23,9 @@ import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
+import kr.adapterz.springboot.exception.PollNotFoundException;
+import kr.adapterz.springboot.exception.PollOptionUpdateInvalidException;
+import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
 import kr.adapterz.springboot.repository.CommentRepository;
 import kr.adapterz.springboot.repository.LikeRepository;
@@ -33,6 +37,7 @@ import kr.adapterz.springboot.repository.PostThumbnailProjection;
 import kr.adapterz.springboot.repository.PostViewRepository;
 import kr.adapterz.springboot.repository.PostVersionRepository;
 import kr.adapterz.springboot.repository.PollRepository;
+import kr.adapterz.springboot.repository.PollOptionRepository;
 import kr.adapterz.springboot.repository.PollTotalVoteCountProjection;
 import kr.adapterz.springboot.repository.PollVoteCountProjection;
 import kr.adapterz.springboot.repository.PollVoteRepository;
@@ -58,6 +63,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final PollRepository pollRepository;
+    private final PollOptionRepository pollOptionRepository;
     private final PollVoteRepository pollVoteRepository;
     private final UserRepository userRepository;
     private final CurrentUserProvider currentUserProvider;
@@ -164,19 +170,10 @@ public class PostService {
     }
 
     @Transactional
-    public PostUpdateResponseDto updatePost(Long postId, MultipartPostUpdateRequestDto request) {
-        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
-        boolean replaceImages = !imageUrls.isEmpty();
-
-        return updatePost(postId, request.getTitle(), request.getContent(), imageUrls, replaceImages);
-    }
-
-    private PostUpdateResponseDto updatePost(
+    public PostUpdateResponseDto updatePost(
             Long postId,
-            String title,
-            String content,
-            List<String> imageUrls,
-            boolean replaceImages
+            MultipartPostUpdateRequestDto request,
+            PollUpdateRequestDto pollRequest
     ) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(PostNotFoundException::new);
@@ -194,6 +191,28 @@ public class PostService {
             throw new PostBlindedException();
         }
 
+        if (pollRequest != null) {
+            pollRepository.findByPostIdForUpdate(postId)
+                    .orElseThrow(PollNotFoundException::new);
+            if (pollVoteRepository.countByIdPollId(postId) > 0) {
+                throw new PollOptionsLockedException();
+            }
+
+            pollOptionRepository.shiftOptionOrders(postId);
+            Poll poll = pollRepository.findByPostIdWithOptions(postId)
+                    .orElseThrow(PollNotFoundException::new);
+            try {
+                poll.replaceOptions(pollRequest.getOptions().stream()
+                        .map(option -> new Poll.OptionUpdate(option.getOptionId(), option.getContent()))
+                        .toList());
+            } catch (IllegalArgumentException e) {
+                throw new PollOptionUpdateInvalidException();
+            }
+        }
+
+        List<String> imageUrls = imageStorageService.storePostImages(request.getImages());
+        boolean replaceImages = !imageUrls.isEmpty();
+
         int nextVersion = postVersionRepository.findLastVersionNumber(post.getId()) + 1;
         postVersionRepository.save(new PostVersion(
                 post,
@@ -203,13 +222,14 @@ public class PostService {
                 nextVersion
         ));
 
-        post.changeTitle(title);
-        post.changeContent(content);
+        post.changeTitle(request.getTitle());
+        post.changeContent(request.getContent());
         if (replaceImages) {
             replaceImagesAfterDeletingExisting(post, imageUrls);
         }
 
-        return new PostUpdateResponseDto(postRepository.save(post));
+        Post savedPost = postRepository.save(post);
+        return new PostUpdateResponseDto(savedPost, createPollResponse(postId, currentUserId));
     }
 
     @Transactional
