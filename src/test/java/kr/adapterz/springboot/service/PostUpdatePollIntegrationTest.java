@@ -9,6 +9,8 @@ import kr.adapterz.springboot.dto.PostUpdateResponseDto;
 import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
+import kr.adapterz.springboot.exception.PollOptionDuplicateException;
+import kr.adapterz.springboot.exception.PollOptionMismatchException;
 import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.repository.PollOptionRepository;
 import kr.adapterz.springboot.repository.PollRepository;
@@ -254,7 +256,28 @@ class PostUpdatePollIntegrationTest {
                         option(other.poll().getOptions().getFirst().getId(), "Java"),
                         option(null, "Python")
                 ))
-        )).isInstanceOf(kr.adapterz.springboot.exception.PollOptionUpdateInvalidException.class);
+        )).isInstanceOf(PollOptionMismatchException.class);
+
+        assertThat(postRepository.findById(context.post().getId()).orElseThrow().getTitle())
+                .isEqualTo("원래 제목");
+        assertThat(pollRepository.findByPostIdWithOptions(context.post().getId()).orElseThrow().getOptions())
+                .extracting(option -> option.getContent())
+                .containsExactly("Java", "Kotlin");
+    }
+
+    @Test
+    @DisplayName("동일한 option_id가 중복되면 게시글과 투표를 수정하지 않는다")
+    void rejectDuplicateOptionId() {
+        PollContext context = saveContext();
+        given(currentUserProvider.getCurrentUserId()).willReturn(context.author().getId());
+        given(imageStorageService.storePostImages(org.mockito.ArgumentMatchers.any())).willReturn(List.of());
+        Long optionId = context.poll().getOptions().getFirst().getId();
+
+        assertThatThrownBy(() -> postService.updatePost(
+                context.post().getId(),
+                postRequest("실패 제목", "실패 본문"),
+                pollRequest(List.of(option(optionId, "Java"), option(optionId, "Kotlin")))
+        )).isInstanceOf(PollOptionDuplicateException.class);
 
         assertThat(postRepository.findById(context.post().getId()).orElseThrow().getTitle())
                 .isEqualTo("원래 제목");

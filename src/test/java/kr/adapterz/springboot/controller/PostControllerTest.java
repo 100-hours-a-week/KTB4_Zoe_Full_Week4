@@ -11,6 +11,8 @@ import kr.adapterz.springboot.entity.Poll;
 import kr.adapterz.springboot.entity.Post;
 import kr.adapterz.springboot.entity.User;
 import kr.adapterz.springboot.exception.GlobalExceptionHandler;
+import kr.adapterz.springboot.exception.PollOptionDuplicateException;
+import kr.adapterz.springboot.exception.PollOptionMismatchException;
 import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.service.PostService;
 import org.junit.jupiter.api.DisplayName;
@@ -199,6 +201,58 @@ class PostControllerTest {
                         .param("content", "수정 본문"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("poll_options_locked"));
+    }
+
+    @Test
+    @DisplayName("다른 투표의 선택지 수정 요청은 poll_option_mismatch를 반환한다")
+    void returnBadRequestWhenPollOptionDoesNotBelongToPoll() throws Exception {
+        given(postService.updatePost(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .willThrow(new PollOptionMismatchException());
+        MockMultipartFile pollPart = new MockMultipartFile(
+                "poll",
+                "poll.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                "{\"options\":[{\"option_id\":999,\"content\":\"Java\"},{\"content\":\"Python\"}]}".getBytes()
+        );
+
+        mockMvc.perform(multipart("/posts/{postId}", 1L)
+                        .file(pollPart)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .param("title", "수정 제목")
+                        .param("content", "수정 본문"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("poll_option_mismatch"));
+    }
+
+    @Test
+    @DisplayName("중복 option_id 수정 요청은 poll_options_duplicate를 반환한다")
+    void returnBadRequestWhenPollOptionIdIsDuplicated() throws Exception {
+        given(postService.updatePost(org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
+                .willThrow(new PollOptionDuplicateException());
+        MockMultipartFile pollPart = new MockMultipartFile(
+                "poll",
+                "poll.json",
+                MediaType.APPLICATION_JSON_VALUE,
+                "{\"options\":[{\"option_id\":101,\"content\":\"Java\"},{\"option_id\":101,\"content\":\"Java\"}]}".getBytes()
+        );
+
+        mockMvc.perform(multipart("/posts/{postId}", 1L)
+                        .file(pollPart)
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        })
+                        .param("title", "수정 제목")
+                        .param("content", "수정 본문"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("poll_options_duplicate"));
     }
 
     @Test

@@ -7,10 +7,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.Set;
 
 public interface PollOptionRepository extends JpaRepository<PollOption, Long> {
 
     Optional<PollOption> findByIdAndPollPostId(Long optionId, Long pollId);
+
+    @Query("""
+            select option.id
+            from PollOption option
+            where option.poll.postId = :pollId
+            """)
+    Set<Long> findIdsByPollPostId(@Param("pollId") Long pollId);
 
     @Modifying(flushAutomatically = true)
     @Query("""

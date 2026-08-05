@@ -74,6 +74,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "poll_option_mismatch");
     }
 
+    @ExceptionHandler(PollOptionDuplicateException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handlePollOptionDuplicate(PollOptionDuplicateException e) {
+        return error(HttpStatus.BAD_REQUEST, "poll_options_duplicate");
+    }
+
     @ExceptionHandler(PollOptionsLockedException.class)
     public ResponseEntity<ApiResponseDto<Void>> handlePollOptionsLocked(PollOptionsLockedException e) {
         return error(HttpStatus.CONFLICT, "poll_options_locked");

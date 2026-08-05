@@ -24,6 +24,8 @@ import kr.adapterz.springboot.exception.PostBlindedException;
 import kr.adapterz.springboot.exception.PostNotFoundException;
 import kr.adapterz.springboot.exception.PostRateLimitExceededException;
 import kr.adapterz.springboot.exception.PollNotFoundException;
+import kr.adapterz.springboot.exception.PollOptionDuplicateException;
+import kr.adapterz.springboot.exception.PollOptionMismatchException;
 import kr.adapterz.springboot.exception.PollOptionUpdateInvalidException;
 import kr.adapterz.springboot.exception.PollOptionsLockedException;
 import kr.adapterz.springboot.exception.UserNotFoundException;
@@ -198,6 +200,7 @@ public class PostService {
                 throw new PollOptionsLockedException();
             }
 
+            validatePollOptionReferences(pollOptionRepository.findIdsByPollPostId(postId), pollRequest);
             pollOptionRepository.shiftOptionOrders(postId);
             Poll poll = pollRepository.findByPostIdWithOptions(postId)
                     .orElseThrow(PollNotFoundException::new);
@@ -230,6 +233,23 @@ public class PostService {
 
         Post savedPost = postRepository.save(post);
         return new PostUpdateResponseDto(savedPost, createPollResponse(postId, currentUserId));
+    }
+
+    private void validatePollOptionReferences(Set<Long> existingOptionIds, PollUpdateRequestDto pollRequest) {
+        Set<Long> requestedOptionIds = new java.util.HashSet<>();
+
+        for (PollUpdateRequestDto.Option option : pollRequest.getOptions()) {
+            Long optionId = option.getOptionId();
+            if (optionId == null) {
+                continue;
+            }
+            if (!requestedOptionIds.add(optionId)) {
+                throw new PollOptionDuplicateException();
+            }
+            if (!existingOptionIds.contains(optionId)) {
+                throw new PollOptionMismatchException();
+            }
+        }
     }
 
     @Transactional
