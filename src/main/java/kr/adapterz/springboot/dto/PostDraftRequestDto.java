@@ -1,9 +1,12 @@
 package kr.adapterz.springboot.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import kr.adapterz.springboot.validation.ValidPollOptions;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -16,4 +19,8 @@ public class PostDraftRequestDto {
     private String title;
 
     private String content;
+
+    @JsonProperty("poll_options")
+    @ValidPollOptions
+    private List<String> pollOptions;
 }

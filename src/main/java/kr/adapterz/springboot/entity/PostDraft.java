@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -46,25 +48,44 @@ public class PostDraft {
     @Column(columnDefinition = "text")
     private String content;
 
+    @ElementCollection
+    @CollectionTable(
+            name = "post_draft_poll_options",
+            joinColumns = @JoinColumn(name = "draft_id")
+    )
+    @OrderColumn(name = "option_order")
+    @Column(name = "content", nullable = false, length = 30)
+    private List<String> pollOptions = new ArrayList<>();
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public PostDraft(User user, Post post, String draftKey, String title, String content) {
+    public PostDraft(
+            User user,
+            Post post,
+            String draftKey,
+            String title,
+            String content,
+            List<String> pollOptions
+    ) {
         this.user = user;
         this.post = post;
         this.draftKey = draftKey;
         this.title = title;
         this.content = content;
+        this.pollOptions.addAll(pollOptions == null ? List.of() : pollOptions);
         this.createdAt = LocalDateTime.now();
         this.updatedAt = this.createdAt;
     }
 
-    public void update(String title, String content) {
+    public void update(String title, String content, List<String> pollOptions) {
         this.title = title;
         this.content = content;
+        this.pollOptions.clear();
+        this.pollOptions.addAll(pollOptions == null ? List.of() : pollOptions);
         this.updatedAt = LocalDateTime.now();
     }
 

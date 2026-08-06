@@ -28,6 +28,7 @@ class MySqlMigrationTest {
             "poll_options",
             "poll_votes",
             "polls",
+            "post_draft_poll_options",
             "post_drafts",
             "post_images",
             "post_likes",
@@ -71,12 +72,12 @@ class MySqlMigrationTest {
         Integer successfulMigrationCount = jdbcClient.sql("""
                         SELECT COUNT(*)
                         FROM flyway_schema_history
-                        WHERE version IN ('1', '2', '3')
+                        WHERE version IN ('1', '2', '3', '4')
                           AND success = TRUE
                         """)
                 .query(Integer.class)
                 .single();
-        assertThat(successfulMigrationCount).isEqualTo(3);
+        assertThat(successfulMigrationCount).isEqualTo(4);
 
         List<String> tables = jdbcClient.sql("""
                         SELECT table_name

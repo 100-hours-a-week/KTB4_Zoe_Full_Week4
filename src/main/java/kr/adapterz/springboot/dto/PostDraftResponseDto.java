@@ -6,6 +6,7 @@ import kr.adapterz.springboot.entity.PostDraft;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 public class PostDraftResponseDto {
@@ -20,6 +21,9 @@ public class PostDraftResponseDto {
 
     private String content;
 
+    @JsonProperty("poll_options")
+    private List<String> pollOptions;
+
     @JsonProperty("created_at")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
@@ -33,6 +37,7 @@ public class PostDraftResponseDto {
         this.postId = draft.getPostId();
         this.title = draft.getTitle();
         this.content = draft.getContent();
+        this.pollOptions = List.copyOf(draft.getPollOptions());
         this.createdAt = draft.getCreatedAt();
         this.updatedAt = draft.getUpdatedAt();
     }

@@ -43,11 +43,12 @@ public class PostDraftService {
                         post,
                         draftKey,
                         request.getTitle(),
-                        request.getContent()
+                        request.getContent(),
+                        request.getPollOptions()
                 ));
 
         if (draft.getId() != null) {
-            draft.update(request.getTitle(), request.getContent());
+            draft.update(request.getTitle(), request.getContent(), request.getPollOptions());
         }
 
         PostDraft savedDraft = postDraftRepository.save(draft);
