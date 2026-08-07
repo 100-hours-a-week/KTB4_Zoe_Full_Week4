@@ -2,9 +2,9 @@ package kr.adapterz.springboot.auth;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import kr.adapterz.springboot.dto.ApiResponseDto;
+import kr.adapterz.springboot.exception.ErrorResponseFactory;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class SecurityAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+    private final ErrorResponseFactory errorResponseFactory;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -25,13 +26,16 @@ public class SecurityAuthenticationEntryPoint implements AuthenticationEntryPoin
             HttpServletResponse response,
             AuthenticationException authException
     ) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ResponseEntity<?> error = errorResponseFactory.error(
+                request,
+                org.springframework.http.HttpStatus.UNAUTHORIZED,
+                "authentication_required"
+        );
+        response.setStatus(error.getStatusCode().value());
+        response.setContentType("application/json");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-
-        objectMapper.writeValue(
-                response.getWriter(),
-                new ApiResponseDto<>("authentication_required", null)
+        response.getWriter().write(
+                objectMapper.writeValueAsString(error.getBody())
         );
     }
 }
